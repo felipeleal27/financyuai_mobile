@@ -1,0 +1,265 @@
+import 'package:flutter/foundation.dart';
+import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
+import 'package:neo_financyuai/app/data/model/categoria_model.dart';
+import 'package:neo_financyuai/app/database/local_storage/local_storage.dart';
+import 'package:neo_financyuai/app/database/sqllite/db.dart';
+import 'package:neo_financyuai/app/database/sqllite/sql_lite.dart';
+import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';
+import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
+import 'package:neo_financyuai/app/service/auth_service.dart';
+
+/// Implementação do repositório de dados da tela principal
+/// Gerencia movimentações, categorias e sincronização com Firebase
+class HomeRepositoryImpl extends HomeRepository {
+  final LocalStorage _localStorage;
+  final FirebaseSyncService _syncService;
+  final AuthService _authService;
+
+  HomeRepositoryImpl({
+    required LocalStorage localStorage,
+    required FirebaseSyncService syncService,
+    required AuthService authService,
+  }) : _localStorage = localStorage,
+       _syncService = syncService,
+       _authService = authService;
+
+  @override
+  Future<bool> novaMovimentacao(MovimentacaoModel movimentacao) async {
+    try {
+      // Use o FirebaseSyncService que cuida do SQLite + Firebase
+      final userId = _authService.userId;
+      
+      if (userId != null) {
+        await _syncService.addMovimentacao(movimentacao, userId);
+      } else {
+        // Fallback: apenas SQLite se não tiver userId
+        final db = await DB.instance.database;
+        final query = CommandSql(db);
+        await query.insert('movimentacao', movimentacao.toMap());
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao salvar movimentação: $e');
+      }
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> removerMovimentacao(MovimentacaoModel movimentacao) async {
+    try {
+      // Use o FirebaseSyncService que cuida do SQLite + Firebase
+      final userId = _authService.userId;
+      
+      if (userId != null) {
+        await _syncService.removeMovimentacao(movimentacao.id.toString(), userId);
+      } else {
+        // Fallback: apenas SQLite se não tiver userId
+        final db = await DB.instance.database;
+        final query = CommandSql(db);
+        await query.delete('movimentacao',
+            where: 'Id = ?', whereArgs: [movimentacao.id]);
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao remover movimentação: $e');
+      }
+      return false;
+    }
+  }
+
+  @override
+  Future<List<MovimentacaoModel>> getMovimentacoes(int mesAtual) async {
+    try {
+      final db = await DB.instance.database;
+      final now = DateTime.now();
+      
+      if (kDebugMode) {
+        print('🔍 BUSCANDO MOVIMENTAÇÕES no SQLite');
+        print('🔍 Mês atual: $mesAtual');
+        print('🔍 Ano atual: ${now.year}');
+      }
+      
+      final movimentacao = await CommandSql(db).select('movimentacao');
+      
+      if (kDebugMode) {
+        print('🔍 Total de movimentações no SQLite: ${movimentacao.length}');
+        for (var mov in movimentacao) {
+          final dataMovimentacao = DateTime.fromMillisecondsSinceEpoch(mov['DataMovimentacao']);
+          print('   - ${mov['Nome']}: R\$ ${mov['Valor']} em ${dataMovimentacao.day}/${dataMovimentacao.month}/${dataMovimentacao.year}');
+        }
+      }
+      
+      final result = movimentacao.where((e) {
+        final dataMovimentacao = DateTime.fromMillisecondsSinceEpoch(e['DataMovimentacao']);
+        return dataMovimentacao.month == mesAtual && 
+               dataMovimentacao.year == now.year;
+      }).toList();
+
+      if (kDebugMode) {
+        print('🔍 Movimentações filtradas por mês/ano: ${result.length}');
+      }
+
+      return result
+          .map((e) => MovimentacaoModel.fromMap(e, sqlLite: true))
+          .toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao buscar movimentações: $e');
+      }
+      return [];
+    }
+  }
+
+  @override
+  Future<double> setSaldo(double value, bool removendo) async {
+    try {
+      var saldoAtual = await _localStorage.read<String>('saldo');
+      double? saldoDouble = double.tryParse(saldoAtual ?? '0');
+      if (removendo) {
+        saldoDouble = (saldoDouble ?? 0) - value;
+        await _localStorage.write('saldo', saldoDouble.toString());
+        return saldoDouble;
+      } else {
+        saldoDouble = (saldoDouble ?? 0) + value;
+        await _localStorage.write('saldo', saldoDouble.toString());
+        return saldoDouble;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(e);
+      }
+      return 0.0;
+    }
+  }
+
+  @override
+  Future<List<CategoriaModel>> getCategorias() async {
+    try {
+      final db = await DB.instance.database;
+      final categorias = await CommandSql(db).select('categoria');
+      
+      final result = categorias
+          .map((e) => CategoriaModel.fromMap(e, sqlLite: true))
+          .toList();
+      
+      // Se não há categorias locais, avisa que são gerenciadas apenas localmente
+      if (result.isEmpty) {
+        if (kDebugMode) {
+          print('ℹ️ Nenhuma categoria encontrada. Categorias são gerenciadas apenas localmente.');
+        }
+      }
+      
+      return result;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao buscar categorias: $e');
+      }
+      return [];
+    }
+  }
+
+  @override
+  Future<bool> inserirCategoria(CategoriaModel categoria) async {
+    try {
+      final db = await DB.instance.database;
+      final query = CommandSql(db);
+      
+      await query.insert('categoria', categoria.toMap());
+      
+      if (kDebugMode) {
+        print('✅ Categoria salva no SQLite local: ${categoria.nome}');
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao inserir categoria: $e');
+      }
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> atualizarCategoria(CategoriaModel categoria) async {
+    try {
+      final db = await DB.instance.database;
+      final query = CommandSql(db);
+      
+      await query.update('categoria', categoria.toMap(), where: 'Id = ?', whereArgs: [categoria.id]);
+      
+      if (kDebugMode) {
+        print('✅ Categoria atualizada no SQLite local: ${categoria.nome}');
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao atualizar categoria: $e');
+      }
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> removerCategoria(int id) async {
+    try {
+      final db = await DB.instance.database;
+      final query = CommandSql(db);
+      
+      // Verificar se existem transações usando esta categoria
+      final movimentacoes = await query.rawQuery('SELECT COUNT(*) as count FROM movimentacao WHERE IdCategoria = ?', [id]);
+      final count = movimentacoes.first['count'] as int;
+      
+      if (count > 0) {
+        if (kDebugMode) {
+          print('❌ Não é possível remover categoria: existem $count transações associadas');
+        }
+        return false;
+      }
+      
+      await query.delete('categoria', where: 'Id = ?', whereArgs: [id]);
+      
+      if (kDebugMode) {
+        print('✅ Categoria removida do SQLite local');
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao remover categoria: $e');
+      }
+      return false;
+    }
+  }
+
+  /// ❌ Categorias não são mais sincronizadas com Firebase
+  @override
+  Future<void> syncCategoriasToFirebase() async {
+    if (kDebugMode) {
+      print('ℹ️ Categorias são gerenciadas apenas localmente (SQLite)');
+    }
+  }
+
+  /// ✅ Sincroniza apenas transações com Firebase
+  @override
+  Future<void> syncMovimentacoesToFirebase() async {
+    try {
+      final userId = _authService.userId;
+      if (userId != null) {
+        await _syncService.syncTransacoesToFirebase(userId);
+        if (kDebugMode) {
+          print('✅ Transações sincronizadas com Firebase');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao sincronizar transações: $e');
+      }
+    }
+  }
+}

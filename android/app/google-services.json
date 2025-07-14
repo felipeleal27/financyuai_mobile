@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "207707200648",
+    "project_id": "financyuai-1804",
+    "storage_bucket": "financyuai-1804.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207707200648:android:e135698764a701b459d33d",
+        "android_client_info": {
+          "package_name": "com.example.neo_financyuai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "207707200648-s6pt8ius7r7po20pue71l97215qf6mq6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.neo_financyuai",
+            "certificate_hash": "32f5f653b4f73d69b3e214f73531907f85114ba9"
+          }
+        },
+        {
+          "client_id": "207707200648-g729s0rqe1f7aaqnff0k42dcnfb3t5r6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASL9UvFmP0EICssmxiKokrRWCvEOYkLhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "207707200648-g729s0rqe1f7aaqnff0k42dcnfb3t5r6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "207707200648-944jvvsdjr1poa3q66536tgb6u0j4kvj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.neoFinancyuai"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
