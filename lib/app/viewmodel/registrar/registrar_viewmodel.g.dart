@@ -8,9 +8,9 @@ part of 'registrar_viewmodel.dart';
 
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
-mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
+mixin _$RegistrarViewmodel on RegistrarViewmodelBase, Store {
   late final _$isLoadingAtom = Atom(
-    name: '_RegistrarViewmodelBase.isLoading',
+    name: 'RegistrarViewmodelBase.isLoading',
     context: context,
   );
 
@@ -28,7 +28,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$errorMessageAtom = Atom(
-    name: '_RegistrarViewmodelBase.errorMessage',
+    name: 'RegistrarViewmodelBase.errorMessage',
     context: context,
   );
 
@@ -46,7 +46,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$successMessageAtom = Atom(
-    name: '_RegistrarViewmodelBase.successMessage',
+    name: 'RegistrarViewmodelBase.successMessage',
     context: context,
   );
 
@@ -64,7 +64,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$showPasswordAtom = Atom(
-    name: '_RegistrarViewmodelBase.showPassword',
+    name: 'RegistrarViewmodelBase.showPassword',
     context: context,
   );
 
@@ -82,7 +82,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$showConfirmPasswordAtom = Atom(
-    name: '_RegistrarViewmodelBase.showConfirmPassword',
+    name: 'RegistrarViewmodelBase.showConfirmPassword',
     context: context,
   );
 
@@ -100,7 +100,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$registerWithEmailAndPasswordAsyncAction = AsyncAction(
-    '_RegistrarViewmodelBase.registerWithEmailAndPassword',
+    'RegistrarViewmodelBase.registerWithEmailAndPassword',
     context: context,
   );
 
@@ -122,7 +122,7 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
   }
 
   late final _$signInWithGoogleAsyncAction = AsyncAction(
-    '_RegistrarViewmodelBase.signInWithGoogle',
+    'RegistrarViewmodelBase.signInWithGoogle',
     context: context,
   );
 
@@ -131,44 +131,44 @@ mixin _$RegistrarViewmodel on _RegistrarViewmodelBase, Store {
     return _$signInWithGoogleAsyncAction.run(() => super.signInWithGoogle());
   }
 
-  late final _$_RegistrarViewmodelBaseActionController = ActionController(
-    name: '_RegistrarViewmodelBase',
+  late final _$RegistrarViewmodelBaseActionController = ActionController(
+    name: 'RegistrarViewmodelBase',
     context: context,
   );
 
   @override
   void togglePasswordVisibility() {
-    final _$actionInfo = _$_RegistrarViewmodelBaseActionController.startAction(
-      name: '_RegistrarViewmodelBase.togglePasswordVisibility',
+    final _$actionInfo = _$RegistrarViewmodelBaseActionController.startAction(
+      name: 'RegistrarViewmodelBase.togglePasswordVisibility',
     );
     try {
       return super.togglePasswordVisibility();
     } finally {
-      _$_RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
+      _$RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
     }
   }
 
   @override
   void toggleConfirmPasswordVisibility() {
-    final _$actionInfo = _$_RegistrarViewmodelBaseActionController.startAction(
-      name: '_RegistrarViewmodelBase.toggleConfirmPasswordVisibility',
+    final _$actionInfo = _$RegistrarViewmodelBaseActionController.startAction(
+      name: 'RegistrarViewmodelBase.toggleConfirmPasswordVisibility',
     );
     try {
       return super.toggleConfirmPasswordVisibility();
     } finally {
-      _$_RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
+      _$RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
     }
   }
 
   @override
   void clearMessages() {
-    final _$actionInfo = _$_RegistrarViewmodelBaseActionController.startAction(
-      name: '_RegistrarViewmodelBase.clearMessages',
+    final _$actionInfo = _$RegistrarViewmodelBaseActionController.startAction(
+      name: 'RegistrarViewmodelBase.clearMessages',
     );
     try {
       return super.clearMessages();
     } finally {
-      _$_RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
+      _$RegistrarViewmodelBaseActionController.endAction(_$actionInfo);
     }
   }
 

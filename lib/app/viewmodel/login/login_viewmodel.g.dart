@@ -127,6 +127,28 @@ mixin _$LoginViewModel on LoginViewmodelBase, Store {
     return _$loginOfflineAsyncAction.run(() => super.loginOffline());
   }
 
+  late final _$loginWithGitHubAsyncAction = AsyncAction(
+    'LoginViewmodelBase.loginWithGitHub',
+    context: context,
+  );
+
+  @override
+  Future<bool> loginWithGitHub() {
+    return _$loginWithGitHubAsyncAction.run(() => super.loginWithGitHub());
+  }
+
+  late final _$loginWithMicrosoftAsyncAction = AsyncAction(
+    'LoginViewmodelBase.loginWithMicrosoft',
+    context: context,
+  );
+
+  @override
+  Future<bool> loginWithMicrosoft() {
+    return _$loginWithMicrosoftAsyncAction.run(
+      () => super.loginWithMicrosoft(),
+    );
+  }
+
   late final _$LoginViewmodelBaseActionController = ActionController(
     name: 'LoginViewmodelBase',
     context: context,

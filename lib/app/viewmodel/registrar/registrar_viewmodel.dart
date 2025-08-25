@@ -5,12 +5,12 @@ import 'package:neo_financyuai/app/service/auth_service.dart';
 
 part 'registrar_viewmodel.g.dart';
 
-class RegistrarViewmodel = _RegistrarViewmodelBase with _$RegistrarViewmodel;
+class RegistrarViewmodel = RegistrarViewmodelBase with _$RegistrarViewmodel;
 
-abstract class _RegistrarViewmodelBase with Store {
+abstract class RegistrarViewmodelBase with Store {
   final AuthService _authService;
 
-  _RegistrarViewmodelBase(this._authService);
+  RegistrarViewmodelBase(this._authService);
 
   @observable
   bool isLoading = false;

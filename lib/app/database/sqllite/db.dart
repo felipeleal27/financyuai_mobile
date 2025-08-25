@@ -18,7 +18,14 @@ static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuar
 
   /// Getter para obter a instância do banco de dados
   Future<Database> get database async {
-    if (_database != null) return _database!;
+    if (_database != null) {
+      // Se a instância existir mas estiver fechada, reabre
+      if (!_database!.isOpen) {
+        _database = null;
+        return await _initDatabase();
+      }
+      return _database!;
+    }
 
     return await _initDatabase();
   }
@@ -88,6 +95,14 @@ static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuar
   
   /// Apaga completamente o banco de dados
   Future<void> apagarBanco() async {
+    // Fecha conexão atual (se existir) e zera o handler
+    try {
+      if (_database != null && _database!.isOpen) {
+        await _database!.close();
+      }
+    } catch (_) {}
+    _database = null;
+
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     if (Platform.isWindows) {
       documentsDirectory = await getApplicationSupportDirectory();
@@ -100,8 +115,13 @@ static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuar
       if (await File(path).exists()) {
         await File(path).delete();
       }
-      await openDatabase(path,
-          version: _dbaseVersion, onCreate: _onCreate, onUpgrade: _onUpgrade);
+      // Reabre e reatribui a instância do banco (pronto para uso)
+      _database = await openDatabase(
+        path,
+        version: _dbaseVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
     }
   }
 

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:mobx/mobx.dart';
+import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
 import 'package:neo_financyuai/app/data/model/categoria_model.dart';
@@ -11,7 +13,7 @@ import 'package:neo_financyuai/app/service/auth_service.dart';
 part 'home_viewmodel.g.dart';
 
 /// ViewModel principal responsável pela lógica da tela inicial
-/// 
+///
 /// Gerencia:
 /// - Estado das movimentações financeiras
 /// - Categorias de transações
@@ -26,32 +28,47 @@ abstract class HomeViewmodelBase with Store {
   final FirebaseSyncService _syncService;
   final NotificationService _notificationService;
   final AuthService _authService;
+  final SaldoService _saldoService;
 
   HomeViewmodelBase({
     required HomeRepository homeRepository,
     required FirebaseSyncService syncService,
     required NotificationService notificationService,
     required AuthService authService,
-  })  : _homeRepository = homeRepository,
-        _syncService = syncService,
-        _notificationService = notificationService,
-        _authService = authService {
-    _initializeServices();
-  }
+    required SaldoService saldoService,
+  }) : _homeRepository = homeRepository,
+       _syncService = syncService,
+       _notificationService = notificationService,
+       _authService = authService,
+       _saldoService = saldoService;
 
   /// Inicializa os serviços em segundo plano
-  Future<void> _initializeServices() async {
+  @action
+  Future<void> initializeServices() async {
     await _syncService.initialize();
     await _notificationService.initialize();
-    await carregarCategorias(); // Carrega as categorias automaticamente
-    
+    await carregarCategorias();
+
     // 🆕 Sincronização inteligente pós-login
     final userId = _authService.userId;
     if (userId != null) {
       await _syncService.syncOnLogin(userId);
     }
-    
-    await carregarMovimentacoes(); // Carrega as movimentações após sync
+
+    await carregarMovimentacoes(); 
+    await carregarSaldo(_mesAtual);
+  }
+
+  @action
+  Future<void> carregarSaldo(DateTime mesAtual) async {
+    try {
+      final saldo = await _saldoService.calculaSaldoExibido(mesAtual);
+      _saldoAtual = saldo;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Erro ao carregar saldo: $e');
+      }
+    }
   }
 
   @observable
@@ -62,6 +79,9 @@ abstract class HomeViewmodelBase with Store {
 
   @observable
   double _valor = 0.00;
+
+  @observable
+  double _saldoAtual = 0.00;
 
   @observable
   CategoriaModel? _categoriaSelecionada;
@@ -81,7 +101,10 @@ abstract class HomeViewmodelBase with Store {
 
   @observable
   // ignore: prefer_final_fields
-  ObservableList<MovimentacaoModel> _movimentacoes = ObservableList<MovimentacaoModel>();
+  ObservableList<MovimentacaoModel> _movimentacoes =
+      ObservableList<MovimentacaoModel>();
+
+  final DateTime _mesAtual = DateTime.now();
 
   @observable
   bool _shouldOpenDialog = false;
@@ -96,10 +119,11 @@ abstract class HomeViewmodelBase with Store {
   String get nomeMovimentacao => _nomeMovimentacao;
   bool get isSaida => _isSaida;
   bool get shouldOpenDialog => _shouldOpenDialog;
+  double get saldoAtual => _saldoAtual;
 
   /// Obtém o ID do usuário atualmente logado
   String? get currentUserId => _authService.userId;
-  
+
   /// Verifica se o usuário está autenticado
   bool get isUserAuthenticated => _authService.isAuthenticated;
 
@@ -123,6 +147,9 @@ abstract class HomeViewmodelBase with Store {
 
   @action
   void setIsSaida(bool value) => _isSaida = value;
+
+  @action
+  void setSaldoAtual(double value) => _saldoAtual = value;
 
   @action
   void isDialogOpen(bool value) {
@@ -164,15 +191,13 @@ abstract class HomeViewmodelBase with Store {
   @action
   void adicionarMovimentacao(MovimentacaoModel movimentacao) {
     _movimentacoes.add(movimentacao);
-    
+
     // Sincroniza com Firebase (funciona offline) - usa o userId real
     final userId = _authService.userId;
     if (userId != null) {
       _syncService.addMovimentacao(movimentacao, userId);
     }
 
-    
-    
     // Notificações inteligentes
     _checkForNotifications(movimentacao);
   }
@@ -182,11 +207,11 @@ abstract class HomeViewmodelBase with Store {
     try {
       // 1. Remove via repository (SQLite + Firebase)
       final sucesso = await _homeRepository.removerMovimentacao(movimentacao);
-      
+
       if (sucesso) {
         // 2. Remove da lista observável
         _movimentacoes.remove(movimentacao);
-        
+
         if (kDebugMode) {
           debugPrint('✅ Movimentação removida: ${movimentacao.nome}');
         }
@@ -208,7 +233,7 @@ abstract class HomeViewmodelBase with Store {
     if (movimentacao.isSaida && movimentacao.valor.abs() > 500) {
       _notificationService.notifyHighExpense(movimentacao.valor.abs());
     }
-    
+
     // Aqui você pode adicionar mais lógicas:
     // - Meta atingida
     // - Orçamento ultrapassado
@@ -229,7 +254,7 @@ abstract class HomeViewmodelBase with Store {
   Future<void> carregarCategorias() async {
     try {
       final categorias = await _homeRepository.getCategorias();
-      
+
       // Se não há categorias, cria algumas padrão
       if (categorias.isEmpty) {
         await _criarCategoriasPadrao();
@@ -238,7 +263,7 @@ abstract class HomeViewmodelBase with Store {
       } else {
         setCategorias(categorias);
       }
-      
+
       if (kDebugMode) {
         debugPrint('📂 ${_categorias.length} categorias carregadas');
       }
@@ -266,7 +291,7 @@ abstract class HomeViewmodelBase with Store {
     for (final categoria in categoriasDefault) {
       await _homeRepository.inserirCategoria(categoria);
     }
-    
+
     if (kDebugMode) {
       debugPrint('✅ Categorias padrão criadas');
     }
@@ -276,20 +301,20 @@ abstract class HomeViewmodelBase with Store {
     try {
       // 1. Salva no SQLite via repository (já cuida do Firebase automaticamente)
       final sucesso = await _homeRepository.novaMovimentacao(movimentacao);
-      
+
       if (sucesso) {
         // 2. 🔄 Recarrega a lista do SQLite para garantir consistência
         // Isso evita duplicação e garante que mostra os dados corretos imediatamente
         await carregarMovimentacoes();
-        
+
         // 3. Notificações inteligentes
         _checkForNotifications(movimentacao);
-        
+
         if (kDebugMode) {
           debugPrint('✅ Transação salva e lista recarregada do SQLite');
         }
       }
-      
+
       return sucesso;
     } catch (e) {
       if (kDebugMode) {
@@ -337,7 +362,7 @@ abstract class HomeViewmodelBase with Store {
   /// Método de teste para Firebase (apenas debug)
   Future<void> testarFirebase() async {
     if (!kDebugMode) return;
-    
+
     try {
       // Verifica se usuário está autenticado
       if (!isUserAuthenticated || currentUserId == null) {
@@ -349,7 +374,8 @@ abstract class HomeViewmodelBase with Store {
       const uuid = Uuid();
       final movimentacaoTeste = MovimentacaoModel(
         id: uuid.v4(), // Gera UUID único
-        nome: "Teste Firebase - ${DateTime.now().hour}:${DateTime.now().minute}",
+        nome:
+            "Teste Firebase - ${DateTime.now().hour}:${DateTime.now().minute}",
         valor: -99.99,
         idCategoria: 1,
         isSaida: true,
@@ -357,16 +383,15 @@ abstract class HomeViewmodelBase with Store {
         descricao: "Transação criada para testar Firebase",
         idUsuario: currentUserId!, // Usa UID do Firebase Auth
       );
-      
+
       // Adiciona via Firebase
       await gravarMovimentacao(movimentacaoTeste);
-      
+
       // Força sincronização
       await sincronizarTodosDados();
-      
+
       debugPrint('🧪 Teste Firebase executado - verifique o console Firebase!');
       debugPrint('📱 UserID para buscar no Firebase: ${await _getUserId()}');
-      
     } catch (e) {
       debugPrint('❌ Erro no teste Firebase: $e');
     }
@@ -406,7 +431,7 @@ abstract class HomeViewmodelBase with Store {
       DateTime.now().second,
       DateTime.now().millisecond,
     );
-    
+
     return MovimentacaoModel(
       id: uuid.v4(), // Gera UUID único
       nome: _nomeMovimentacao,
@@ -423,35 +448,59 @@ abstract class HomeViewmodelBase with Store {
   Future<void> carregarMovimentacoes() async {
     try {
       final userId = _authService.userId;
-      
+
       if (kDebugMode) {
         print('🔍 CARREGAR MOVIMENTAÇÕES - userId: $userId');
         print('🔍 Usuário autenticado: ${_authService.isAuthenticated}');
+        print(
+          '🔍 Mês selecionado: ${_dataSelecionada.month}/${_dataSelecionada.year}',
+        );
       }
-      
+
       if (userId != null) {
-        // 1. Carrega do SQLite primeiro (mais rápido)
-        final movimentacoesLocal = await _homeRepository.getMovimentacoes(DateTime.now().month);
-        setMovimentacoes(movimentacoesLocal);
-        
+        // 1. Limpa o stream anterior para evitar conflitos
+        _limparStream();
+
+        // 2. Carrega do SQLite primeiro (mais rápido) - usando o mês e ano da data selecionada
+        final movimentacoesLocal = await _homeRepository.getMovimentacoes(
+          _dataSelecionada.month,
+          _dataSelecionada.year,
+        );
+
+        // 3. Filtra pelo ano também para garantir que estamos no ano correto
+        final movimentacoesFiltradas =
+            movimentacoesLocal.where((mov) {
+              return mov.dataMovimentacao.year == _dataSelecionada.year &&
+                  mov.dataMovimentacao.month == _dataSelecionada.month;
+            }).toList();
+
+        setMovimentacoes(movimentacoesFiltradas);
+        await _saldoService.calculaSaldoExibido(_mesAtual);
+
         if (kDebugMode) {
-          print('📊 ${movimentacoesLocal.length} movimentações carregadas do SQLite');
+          print(
+            '📊 ${movimentacoesFiltradas.length} movimentações carregadas do SQLite para ${_dataSelecionada.month}/${_dataSelecionada.year}',
+          );
           print('📊 Lista atual no viewmodel: ${_movimentacoes.length} itens');
-          for (var mov in movimentacoesLocal) {
-            print('   - ${mov.nome}: R\$ ${mov.valor} (${mov.isSaida ? "Saída" : "Entrada"})');
+          for (var mov in movimentacoesFiltradas) {
+            print(
+              '   - ${mov.nome}: R\$ ${mov.valor} (${mov.isSaida ? "Saída" : "Entrada"}) - ${mov.dataMovimentacao}',
+            );
           }
         }
-        
-        // 2. Configura stream do Firebase para atualizações em tempo real
+
+        // 4. Configura novo stream do Firebase para atualizações em tempo real
         _configurarStreamFirebase(userId);
-        
-        // 3. Força sincronização se estiver online
+
+        // 5. Força sincronização se estiver online
         if (await isOnline()) {
           await _syncService.syncTransacoesToFirebase(userId);
         }
       } else {
         if (kDebugMode) {
-          print('❌ Usuário não autenticado - não é possível carregar movimentações');
+          print(
+            '❌ Usuário não autenticado - não é possível carregar movimentações',
+          );
         }
       }
     } catch (e) {
@@ -463,41 +512,84 @@ abstract class HomeViewmodelBase with Store {
   }
 
   /// Configura stream do Firebase para updates em tempo real
+  StreamSubscription<List<MovimentacaoModel>>? _streamSubscription;
+
   void _configurarStreamFirebase(String userId) {
     if (kDebugMode) {
       print('🔄 Configurando stream Firebase para userId: $userId');
     }
-    
-    _syncService.getTransacoesStream(userId).listen(
-      (movimentacoesFirebase) {
-        if (kDebugMode) {
-          print('🔄 ${movimentacoesFirebase.length} movimentações recebidas do Firebase');
-          for (var mov in movimentacoesFirebase) {
-            print('   Firebase - ${mov.nome}: R\$ ${mov.valor}');
-          }
-        }
-        
-        // ✅ Só atualiza se recebeu dados do Firebase (online) 
-        // e se há diferença no número de itens ou conteúdo
-        if (movimentacoesFirebase.isNotEmpty && 
-            movimentacoesFirebase.length != _movimentacoes.length) {
-          if (kDebugMode) {
-            print('🔄 Atualizando lista com dados do Firebase (${movimentacoesFirebase.length} itens)');
-          }
-          setMovimentacoes(movimentacoesFirebase);
-        } else if (movimentacoesFirebase.isEmpty && _movimentacoes.isNotEmpty) {
-          // Se Firebase está vazio mas temos dados locais, mantém os dados locais
-          if (kDebugMode) {
-            print('📱 Mantendo dados locais (Firebase vazio, ${_movimentacoes.length} itens locais)');
-          }
-        }
-      },
-      onError: (error) {
-        if (kDebugMode) {
-          print('❌ Erro no stream Firebase: $error');
-        }
-      },
-    );
+
+    // Cancela stream anterior se existir
+    _streamSubscription?.cancel();
+
+    _streamSubscription = _syncService
+        .getTransacoesStream(userId)
+        .listen(
+          (movimentacoesFirebase) {
+            if (kDebugMode) {
+              print(
+                '🔄 ${movimentacoesFirebase.length} movimentações recebidas do Firebase',
+              );
+              for (var mov in movimentacoesFirebase) {
+                print('   Firebase - ${mov.nome}: R\$ ${mov.valor}');
+              }
+            }
+
+            // ✅ Filtra as movimentações pelo mês/ano selecionado
+            final movimentacoesFiltradas =
+                movimentacoesFirebase.where((mov) {
+                  return mov.dataMovimentacao.year == _dataSelecionada.year &&
+                      mov.dataMovimentacao.month == _dataSelecionada.month;
+                }).toList();
+
+            if (kDebugMode) {
+              print(
+                '🔄 ${movimentacoesFiltradas.length} movimentações filtradas para ${_dataSelecionada.month}/${_dataSelecionada.year}',
+              );
+            }
+
+            // ✅ Só atualiza se recebeu dados do Firebase (online)
+            // e se há diferença no número de itens ou conteúdo
+            if (movimentacoesFiltradas.isNotEmpty) {
+              if (kDebugMode) {
+                print(
+                  '🔄 Atualizando lista com dados do Firebase (${movimentacoesFiltradas.length} itens)',
+                );
+              }
+              setMovimentacoes(movimentacoesFiltradas);
+            } else if (movimentacoesFiltradas.isEmpty) {
+              // Se Firebase está vazio para este mês, verifica se deve limpar ou manter dados locais
+              if (kDebugMode) {
+                print(
+                  '📱 Firebase vazio para este mês - mantendo dados locais se existirem',
+                );
+              }
+              // Não limpa automaticamente, deixa o SQLite como fonte principal
+            }
+          },
+          onError: (error) {
+            if (kDebugMode) {
+              print('❌ Erro no stream Firebase: $error');
+            }
+          },
+        );
+  }
+
+  /// Limpa o stream anterior quando o mês muda
+  void _limparStream() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+  }
+
+  /// Limpa recursos e estado ao fazer logout
+  @action
+  Future<void> onLogout() async {
+    try {
+      _limparStream();
+      _movimentacoes.clear();
+      _saldoAtual = 0.0;
+      _carregou = false;
+    } catch (_) {}
   }
 
   /// Recarrega as categorias do banco de dados

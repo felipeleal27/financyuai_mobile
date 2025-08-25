@@ -6,7 +6,6 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/viewmodel/login/login_viewmodel.dart';
-import 'package:neo_financyuai/app/views/login/module/login_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/registrar/module/registar_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/custom_text_form_field.dart';
 import 'package:neo_financyuai/app/widgets/theme_selector.dart';
@@ -482,10 +481,17 @@ class _WidgetFormLoginState extends State<WidgetFormLogin>
                         ),
                       ),
                     )
-                  : const Icon(
-                      LucideIcons.globe,
-                      size: 20,
-                      color: Colors.blue,
+                  : Container(
+                      width: 20,
+                      height: 20,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: NetworkImage(
+                            'https://developers.google.com/identity/images/g-logo.png',
+                          ),
+                          fit: BoxFit.contain,
+                        ),
+                      ),
                     ),
               label: Text(
                 widget.viewmodel.isLoading ? 'Entrando...' : 'Continuar com Google',

@@ -28,6 +28,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final viewmodel = Modular.get<HomeViewmodel>();
   late TextEditingController textEditingController = TextEditingController();
   late TextEditingController valorController = TextEditingController();
+  final GlobalKey<State<AppBarContainer>> _appBarKey =
+      GlobalKey<State<AppBarContainer>>();
 
   @override
   void initState() {
@@ -55,20 +57,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeDependencies() {
+  void didChangeDependencies() async {
     super.didChangeDependencies();
     initializeDateFormatting('pt_BR', null);
 
-    // Carrega dados iniciais apenas uma vez
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!viewmodel.carregou) {
-        await Future.wait([
-          viewmodel.carregarCategorias(),
-          viewmodel.carregarMovimentacoes(),
-        ]);
+    if (!viewmodel.carregou) {
+      await viewmodel.carregarCategorias().then((_) async {
+        await viewmodel.carregarMovimentacoes();
+        await viewmodel.initializeServices();
         viewmodel.setCarregou(true);
-      }
-    });
+      });
+    }
   }
 
   void _openChatIA() {
@@ -76,7 +75,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   void showDialogDespesaReceita(BuildContext context) {
-    final helper = AppThemeHelper.of(context); // Captura helper ANTES do modal
+    final helper = AppThemeHelper.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -379,6 +378,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   movimentacao,
                                 );
 
+                                // Atualiza o saldo no AppBar
+                                (_appBarKey.currentState as dynamic)
+                                    ?.atualizarSaldo();
+
                                 // Limpa o form e fecha o modal
                                 valorController.clear();
                                 Modular.to.pop();
@@ -423,6 +426,159 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ],
               ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFilterModal(BuildContext context) {
+    final helper = AppThemeHelper.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return Container(
+          decoration: BoxDecoration(
+            color: helper.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 24,
+              bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: helper.onSurfaceColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Filtros',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: helper.onSurfaceColor,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Filtros por período
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_month,
+                      color: helper.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Período',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: helper.onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Filtros por tipo
+                Row(
+                  children: [
+                    Icon(
+                      Icons.category,
+                      color: helper.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Tipo de Transação',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: helper.onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Filtros por valor
+                Row(
+                  children: [
+                    Icon(
+                      Icons.attach_money,
+                      color: helper.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Faixa de Valor',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: helper.onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                // Botões de ação
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.of(modalContext).pop(),
+                        child: Text(
+                          'Cancelar',
+                          style: TextStyle(
+                            color: helper.onSurfaceColor.withOpacity(0.7),
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(modalContext).pop();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: helper.colorScheme.primary,
+                          foregroundColor: helper.colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Aplicar',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -536,11 +692,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Observer(
             builder: (_) {
               // Lógica igual ao app antigo: verifica shouldOpenDialog no build e abre instantaneamente
-              debugPrint('🏠 Home Observer: shouldOpenDialog = ${viewmodel.shouldOpenDialog}');
+              debugPrint(
+                '🏠 Home Observer: shouldOpenDialog = ${viewmodel.shouldOpenDialog}',
+              );
               if (viewmodel.shouldOpenDialog) {
-                debugPrint('🏠 Home Observer: Flag detectada, abrindo modal...');
+                debugPrint(
+                  '🏠 Home Observer: Flag detectada, abrindo modal...',
+                );
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  debugPrint('🏠 Home Observer: PostFrameCallback executando...');
+                  debugPrint(
+                    '🏠 Home Observer: PostFrameCallback executando...',
+                  );
                   showDialogDespesaReceita(context);
                   viewmodel.isDialogOpen(false);
                   debugPrint('🏠 Home Observer: Modal aberto e flag resetada');
@@ -549,15 +711,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               return const SizedBox.shrink();
             },
           ),
-          
+
           // Conteúdo principal com header fixo
           Column(
             children: [
-              // Header fixo (AppBar + Barra de pesquisa)
               SafeArea(
                 child: Column(
                   children: [
-                    AppBarContainer(helper: helper),
+                    AppBarContainer(
+                      key: _appBarKey,
+                      helper: helper,
+                      onMonthChanged: (novoMes) {
+                        // Atualiza o mês e recarrega as transações
+                        viewmodel.setDataSelecionada(novoMes);
+                        viewmodel.carregarMovimentacoes();
+                      },
+                      onFilterPressed: () {
+                        _showFilterModal(context);
+                      },
+                    ),
                     barraDePesquisa(helper),
                   ],
                 ),
@@ -573,10 +745,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       if (viewmodel.carregou) {
                         if (viewmodel.movimentacoes.isEmpty) {
                           return ListView(
+                            padding: const EdgeInsets.all(0),
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
                               Padding(
-                                padding: const EdgeInsets.all(32),
+                                padding: const EdgeInsets.all(8),
                                 child: Center(
                                   child: Column(
                                     children: [
@@ -611,7 +784,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             ],
                           );
                         }
-                        return _buildTransactionsList();
+                        // O problema está no _buildTransactionsList: o primeiro header de data tem padding vertical de 16.
+                        // Para reduzir o espaço entre a barra de busca e a primeira transação, diminua o padding do primeiro header.
+                        // Solução: Adicione um parâmetro para o primeiro header ou ajuste o _buildTransactionsList.
+                        // Aqui, vamos ajustar o padding do primeiro header diretamente.
+                        final transactionsList = _buildTransactionsList();
+                        return transactionsList;
                       } else {
                         return const Center(child: CircularProgressIndicator());
                       }
@@ -648,7 +826,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Padding barraDePesquisa(AppThemeHelper helper) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       child: Material(
         elevation: helper.brightness == Brightness.light ? 2 : 0,
         color: Colors.transparent,
@@ -767,6 +945,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
                       if (confirmed == true) {
                         await viewmodel.removerMovimentacao(movimentacao);
+                        // Atualiza o saldo no AppBar após remover
+                        (_appBarKey.currentState as dynamic)?.atualizarSaldo();
                       }
                     },
                     padding: EdgeInsets.zero,
@@ -856,11 +1036,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 viewmodel.categoria
                                     .firstWhere(
                                       (e) => movimentacao.idCategoria == e.id,
-                                      orElse: () => CategoriaModel(
-                                        id: 0,
-                                        nome: 'Categoria não encontrada',
-                                        icone: 'category',
-                                      ),
+                                      orElse:
+                                          () => CategoriaModel(
+                                            id: 0,
+                                            nome: 'Categoria não encontrada',
+                                            icone: 'category',
+                                          ),
                                     )
                                     .icone,
                               ),

@@ -11,6 +11,7 @@ import 'package:neo_financyuai/app/service/initialization_service.dart';
 import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
 import 'package:neo_financyuai/app/service/notification_service.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
+import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:neo_financyuai/app/utils/theme_manager.dart';
 import 'package:neo_financyuai/app/viewmodel/home/home_viewmodel.dart';
 
@@ -36,6 +37,14 @@ class CoreModule extends Module {
     i.addSingleton<FirebaseSyncService>(() => FirebaseSyncService());
     i.addSingleton<NotificationService>(() => NotificationService());
     i.addSingleton<AuthService>(() => AuthService());
+    i.addSingleton<SaldoService>(() {
+      final saldoService = SaldoService();
+      saldoService.initialize(
+        homeRepository: i.get<HomeRepository>(),
+        authService: i.get<AuthService>(),
+      );
+      return saldoService;
+    });
     
     // Theme Manager
     i.addSingleton<ThemeManager>(ThemeManager.new);

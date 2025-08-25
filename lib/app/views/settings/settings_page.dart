@@ -450,7 +450,7 @@ class _SettingsPageState extends State<SettingsPage> {
       Icons.palette_outlined,
       'Tema',
       'Selecionar aparência do app',
-      trailing: Observer(builder: (_) => _buildThemeToggle(helper)),
+      trailing: _buildThemeToggle(helper),
     );
   }
 
@@ -587,9 +587,24 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               TextButton(
                 onPressed: () async{
-                  Modular.to.navigate(LoginNomeRotas.navigate);
-                  Modular.to.pop();
-                  await authService.signOut();
+                  try {
+                    // Fecha o diálogo primeiro
+                    if (Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
+                    }
+
+                    // Limpa streams/estado antes do signOut
+                    try {
+                      final homeVm = Modular.get<HomeViewmodel>();
+                      await homeVm.onLogout();
+                    } catch (_) {}
+
+                    // Realiza logout (Firebase + Google + DB + prefs)
+                    await authService.signOut();
+
+                    // Só depois navega para login para evitar guard conflicts
+                    Modular.to.navigate(LoginNomeRotas.navigate);
+                  } catch (_) {}
                 },
                 child: Text(
                   'Sair',

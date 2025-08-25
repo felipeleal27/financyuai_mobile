@@ -63,6 +63,24 @@ mixin _$HomeViewmodel on HomeViewmodelBase, Store {
     });
   }
 
+  late final _$_saldoAtualAtom = Atom(
+    name: 'HomeViewmodelBase._saldoAtual',
+    context: context,
+  );
+
+  @override
+  double get _saldoAtual {
+    _$_saldoAtualAtom.reportRead();
+    return super._saldoAtual;
+  }
+
+  @override
+  set _saldoAtual(double value) {
+    _$_saldoAtualAtom.reportWrite(value, super._saldoAtual, () {
+      super._saldoAtual = value;
+    });
+  }
+
   late final _$_categoriaSelecionadaAtom = Atom(
     name: 'HomeViewmodelBase._categoriaSelecionada',
     context: context,
@@ -193,6 +211,28 @@ mixin _$HomeViewmodel on HomeViewmodelBase, Store {
     });
   }
 
+  late final _$initializeServicesAsyncAction = AsyncAction(
+    'HomeViewmodelBase.initializeServices',
+    context: context,
+  );
+
+  @override
+  Future<void> initializeServices() {
+    return _$initializeServicesAsyncAction.run(
+      () => super.initializeServices(),
+    );
+  }
+
+  late final _$carregarSaldoAsyncAction = AsyncAction(
+    'HomeViewmodelBase.carregarSaldo',
+    context: context,
+  );
+
+  @override
+  Future<void> carregarSaldo(DateTime mesAtual) {
+    return _$carregarSaldoAsyncAction.run(() => super.carregarSaldo(mesAtual));
+  }
+
   late final _$removerMovimentacaoAsyncAction = AsyncAction(
     'HomeViewmodelBase.removerMovimentacao',
     context: context,
@@ -289,6 +329,18 @@ mixin _$HomeViewmodel on HomeViewmodelBase, Store {
     );
     try {
       return super.setIsSaida(value);
+    } finally {
+      _$HomeViewmodelBaseActionController.endAction(_$actionInfo);
+    }
+  }
+
+  @override
+  void setSaldoAtual(double value) {
+    final _$actionInfo = _$HomeViewmodelBaseActionController.startAction(
+      name: 'HomeViewmodelBase.setSaldoAtual',
+    );
+    try {
+      return super.setSaldoAtual(value);
     } finally {
       _$HomeViewmodelBaseActionController.endAction(_$actionInfo);
     }
