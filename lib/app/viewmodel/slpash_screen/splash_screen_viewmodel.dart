@@ -17,20 +17,20 @@ class SplashScreenViewmodel = SplashScreenViewmodelBase
 
 /// Classe base do ViewModel da splash screen
 abstract class SplashScreenViewmodelBase with Store {
-  final SplashScreenRepository _splashScreenRepository;
+  // final SplashScreenRepository _splashScreenRepository;
   final InitializationService _initializationService;
 
   SplashScreenViewmodelBase({
     required SplashScreenRepository splashScreenRepository,
     required InitializationService initializationService,
-  }) : _splashScreenRepository = splashScreenRepository,
+  }) : //_splashScreenRepository = splashScreenRepository,
        _initializationService = initializationService;
 
   @observable
   Duration? timer;
 
   Future<void> calcularSaldo() async {
-    await _splashScreenRepository.calcularSaldoTotal();
+    // await _splashScreenRepository.calcularSaldoTotal();
   }
 
   /// Inicializa categorias padrão se for primeiro acesso

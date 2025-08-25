@@ -12,14 +12,14 @@ import 'package:neo_financyuai/app/views/login/module/login_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/bottom_navigation_bat.dart';
 import 'package:neo_financyuai/app/widgets/cached_user_avatar_sqlite.dart';
 
-class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+class SettingsPageNew extends StatefulWidget {
+  const SettingsPageNew({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  State<SettingsPageNew> createState() => _SettingsPageNewState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageNewState extends State<SettingsPageNew> {
   final viewmodel = Modular.get<SettingsViewmodel>();
   final authService = AuthService();
   final themeManager = Modular.get<ThemeManager>();

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:neo_financyuai/app/viewmodel/login/login_viewmodel.dart';
-import 'package:neo_financyuai/app/views/login/widget_form_login.dart';
+import 'package:neo_financyuai/app/views/login/modern_login_page.dart';
 
 /// Página principal de autenticação do usuário.
 /// 
-/// Exibe o formulário de login e gerencia a autenticação através
-/// do LoginViewModel injetado pelo Modular.
+/// Exibe a tela de login moderna focada em OAuth e gerencia a autenticação 
+/// através do LoginViewModel injetado pelo Modular.
 class LoginPage extends StatefulWidget {
   /// Cria uma nova instância de [LoginPage].
   const LoginPage({super.key});
@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: WidgetFormLogin(viewmodel: viewmodel),
+      body: ModernLoginPage(viewmodel: viewmodel),
     );
   }
 }

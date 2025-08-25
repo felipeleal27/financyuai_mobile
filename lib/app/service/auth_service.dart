@@ -2,6 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:neo_financyuai/app/service/user_photo_cache_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:neo_financyuai/app/database/sqllite/db.dart';
 
 /// Serviço responsável pela autenticação de usuários
 /// 
@@ -52,7 +55,14 @@ class AuthService {
         print('🚀 Iniciando login com Google...');
         print('🔧 Google Sign-In disponível: ${await _googleSignIn.isSignedIn()}');
       }
-      
+      // Garante que o seletor de conta apareça (evita reutilizar conta anterior)
+      try {
+        await _googleSignIn.disconnect();
+      } catch (_) {
+        // ignore: just ensure a fresh sign-in flow
+      }
+      await _googleSignIn.signOut();
+
       // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       
@@ -84,6 +94,28 @@ class AuthService {
 
       // Sign in to Firebase with the credential
       final UserCredential userCredential = await _auth.signInWithCredential(credential);
+
+      // Garante que o documento do usuário existe no Firestore (idempotente)
+      try {
+        final uid = userCredential.user?.uid;
+        if (uid != null) {
+          final firestore = FirebaseFirestore.instance;
+          final userDoc = firestore.collection('users').doc(uid);
+          final snapshot = await userDoc.get();
+          if (!snapshot.exists) {
+            await userDoc.set({
+              'createdAt': FieldValue.serverTimestamp(),
+              'email': userCredential.user?.email,
+              'displayName': userCredential.user?.displayName,
+              'photoURL': userCredential.user?.photoURL,
+            }, SetOptions(merge: true));
+          }
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('ℹ️ Não foi possível garantir user doc no Firestore: $e');
+        }
+      }
       
       if (kDebugMode) {
         print('✅ Login realizado: ${userCredential.user?.displayName}');
@@ -172,9 +204,26 @@ class AuthService {
       if (currentUserId != null) {
         _photoCacheService.clearUserPhotoCache(currentUserId);
       }
+
+      // Limpa SQLite e SharedPreferences no logout
+      try {
+        await DB.instance.apagarBanco();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('❌ Erro ao apagar banco SQLite no logout: $e');
+        }
+      }
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('❌ Erro ao limpar SharedPreferences no logout: $e');
+        }
+      }
       
       if (kDebugMode) {
-        debugPrint('✅ Logout realizado e cache limpo');
+        debugPrint('✅ Logout realizado e dados locais limpos (SQLite + prefs)');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -213,6 +262,46 @@ class AuthService {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Erro no login anônimo: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Login com GitHub (preparado para implementação futura)
+  Future<UserCredential?> signInWithGitHub() async {
+    try {
+      if (kDebugMode) {
+        print('🚀 Tentando login com GitHub...');
+      }
+      
+      // TODO: Implementar GitHub OAuth
+      // Isso requer configuração adicional no Firebase Console
+      // e implementação do GitHub OAuth provider
+      
+      throw UnimplementedError('GitHub OAuth não implementado ainda');
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro no login com GitHub: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Login com Microsoft (preparado para implementação futura)
+  Future<UserCredential?> signInWithMicrosoft() async {
+    try {
+      if (kDebugMode) {
+        print('🚀 Tentando login com Microsoft...');
+      }
+      
+      // TODO: Implementar Microsoft OAuth
+      // Isso requer configuração adicional no Firebase Console
+      // e implementação do Microsoft OAuth provider
+      
+      throw UnimplementedError('Microsoft OAuth não implementado ainda');
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro no login com Microsoft: $e');
       }
       rethrow;
     }

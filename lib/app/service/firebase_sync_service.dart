@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
 import 'package:neo_financyuai/app/database/sqllite/db.dart';
+import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -95,7 +96,18 @@ class FirebaseSyncService {
   /// ✅ Adiciona uma transação (SQLite + Firebase)
   Future<void> addMovimentacao(MovimentacaoModel movimentacao, String userId) async {
     // 1. SEMPRE salva no SQLite primeiro (funciona offline)
-    await _saveToSQLite(movimentacao);
+    // Garante que a movimentação tenha o IdUsuario correto no mapa
+    final toInsert = MovimentacaoModel(
+      id: movimentacao.id,
+      nome: movimentacao.nome,
+      valor: movimentacao.valor,
+      idCategoria: movimentacao.idCategoria,
+      isSaida: movimentacao.isSaida,
+      dataMovimentacao: movimentacao.dataMovimentacao,
+      descricao: movimentacao.descricao,
+      idUsuario: userId,
+    );
+    await _saveToSQLite(toInsert);
     
     if (kDebugMode) {
       print('✅ Transação salva no SQLite');
@@ -105,7 +117,7 @@ class FirebaseSyncService {
     try {
       if (await _isOnline()) {
         // Se online, envia direto para Firebase
-        await _syncSingleTransactionToFirebase(movimentacao, userId);
+  await _syncSingleTransactionToFirebase(toInsert, userId);
         
         if (kDebugMode) {
           print('✅ Transação sincronizada diretamente com Firebase');
@@ -114,10 +126,10 @@ class FirebaseSyncService {
         // Se offline, adiciona à fila para sincronizar depois
         _pendingOperations.add({
           'type': 'add_transacao',
-          'data': _convertToFirebaseFormat(movimentacao.toMap()),
+          'data': _convertToFirebaseFormat(toInsert.toMap()),
           'userId': userId,
           'timestamp': DateTime.now().millisecondsSinceEpoch,
-          'localId': movimentacao.id,
+          'localId': toInsert.id,
         });
         
         await _savePendingOperationsLocally();
@@ -130,10 +142,10 @@ class FirebaseSyncService {
       // Se der erro (offline), adiciona à fila
       _pendingOperations.add({
         'type': 'add_transacao',
-        'data': _convertToFirebaseFormat(movimentacao.toMap()),
+        'data': _convertToFirebaseFormat(toInsert.toMap()),
         'userId': userId,
         'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'localId': movimentacao.id,
+        'localId': toInsert.id,
       });
       
       await _savePendingOperationsLocally();
@@ -165,12 +177,28 @@ class FirebaseSyncService {
 
   /// Salva no SQLite local
   Future<void> _saveToSQLite(MovimentacaoModel movimentacao) async {
-    final db = await DB.instance.database;
-    await db.insert(
-      'movimentacao',
-      movimentacao.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    try {
+      final db = await DB.instance.database;
+      await db.insert(
+        'movimentacao',
+        movimentacao.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } on DatabaseException catch (e) {
+      if (e.isDatabaseClosedError()) {
+        if (kDebugMode) {
+          print('⚠️ DB fechado ao inserir. Reabrindo e tentando novamente...');
+        }
+        final db = await DB.instance.database; // getter reabre se preciso
+        await db.insert(
+          'movimentacao',
+          movimentacao.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      } else {
+        rethrow;
+      }
+    }
   }
 
   /// ✅ Converte formato SQLite para Firebase (apenas transações)
@@ -248,12 +276,28 @@ class FirebaseSyncService {
 
   /// Remove do SQLite local
   Future<void> _removeFromSQLite(String movimentacaoId) async {
-    final db = await DB.instance.database;
-    await db.delete(
-      'movimentacao',
-      where: 'Id = ?',
-      whereArgs: [movimentacaoId],
-    );
+    try {
+      final db = await DB.instance.database;
+      await db.delete(
+        'movimentacao',
+        where: 'Id = ?',
+        whereArgs: [movimentacaoId],
+      );
+    } on DatabaseException catch (e) {
+      if (e.isDatabaseClosedError()) {
+        if (kDebugMode) {
+          print('⚠️ DB fechado ao remover. Reabrindo e tentando novamente...');
+        }
+        final db = await DB.instance.database;
+        await db.delete(
+          'movimentacao',
+          where: 'Id = ?',
+          whereArgs: [movimentacaoId],
+        );
+      } else {
+        rethrow;
+      }
+    }
   }
 
   /// ✅ Sincroniza operações pendentes quando conexão for restaurada
@@ -358,9 +402,12 @@ class FirebaseSyncService {
   Future<void> syncTransacoesToFirebase(String userId) async {
     try {
       final db = await DB.instance.database;
-      final List<Map<String, dynamic>> localTransacoes = await db.query('movimentacao');
+      final List<Map<String, dynamic>> localTransacoes =
+          await db.query('movimentacao', where: 'IdUsuario = ?', whereArgs: [userId]);
       
       for (final transacao in localTransacoes) {
+        // Garante que o idUsuario esteja correto ao subir para o Firebase
+        transacao['IdUsuario'] = userId;
         await _firestore
             .collection('users')
             .doc(userId)
@@ -430,6 +477,9 @@ class FirebaseSyncService {
       for (final transacao in transacoesFirebase) {
         await db.insert('movimentacao', transacao.toMap());
       }
+
+      // 5. Recalcula todos os saldos após a sincronização
+      await SaldoService().recalcularTodosOsSaldos();
 
       if (kDebugMode) {
         print('✅ ${transacoesFirebase.length} transações sincronizadas Firebase → SQLite');

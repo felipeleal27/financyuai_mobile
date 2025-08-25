@@ -105,6 +105,8 @@ abstract class LoginViewmodelBase with Store {
         final user = userCredential.user;
         if (user != null) {
           await _salvarUsuarioGoogle(user);
+         // Recalcula todos os saldos após sincronização do usuário
+        //  await SaldoService().errecalcularTodosOsSaldos();
         }
         
         // Login bem-sucedido, navegar para home
@@ -133,7 +135,7 @@ abstract class LoginViewmodelBase with Store {
           return true;
         }
         
-        _setErrorMessage('Erro de conexão. Verifique sua internet ou tente o modo offline.');
+        _setErrorMessage('Erro de conexão. Verifique sua internet.');
       } else if (e.toString().contains('ApiException: 10')) {
         if (kDebugMode) {
           debugPrint('');
@@ -378,5 +380,93 @@ abstract class LoginViewmodelBase with Store {
     } finally {
       _setLoading(false);
     }
+  }
+
+  /// Login com GitHub (preparado para implementação futura)
+  @action
+  Future<bool> loginWithGitHub() async {
+    try {
+      _setLoading(true);
+      _setErrorMessage(null);
+      
+      if (kDebugMode) {
+        debugPrint('🚀 Iniciando login com GitHub...');
+      }
+
+      // Verifica conectividade
+      final hasConnection = await _connectivityService.hasInternetConnection();
+      if (!hasConnection) {
+        _setErrorMessage('Sem conexão com internet. Verifique sua conexão e tente novamente.');
+        return false;
+      }
+
+      final userCredential = await _authService.signInWithGitHub();
+      
+      if (userCredential != null) {
+        if (kDebugMode) {
+          debugPrint('✅ Login GitHub bem-sucedido!');
+        }
+        
+        await _navigateToHome();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Erro no login com GitHub: $e');
+      }
+      _setErrorMessage('Erro ao fazer login com GitHub. Tente novamente.');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Login com Microsoft (preparado para implementação futura)
+  @action
+  Future<bool> loginWithMicrosoft() async {
+    try {
+      _setLoading(true);
+      _setErrorMessage(null);
+      
+      if (kDebugMode) {
+        debugPrint('🚀 Iniciando login com Microsoft...');
+      }
+
+      // Verifica conectividade
+      final hasConnection = await _connectivityService.hasInternetConnection();
+      if (!hasConnection) {
+        _setErrorMessage('Sem conexão com internet. Verifique sua conexão e tente novamente.');
+        return false;
+      }
+
+      final userCredential = await _authService.signInWithMicrosoft();
+      
+      if (userCredential != null) {
+        if (kDebugMode) {
+          debugPrint('✅ Login Microsoft bem-sucedido!');
+        }
+        
+        await _navigateToHome();
+        return true;
+      }
+      
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Erro no login com Microsoft: $e');
+      }
+      _setErrorMessage('Erro ao fazer login com Microsoft. Tente novamente.');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Navega para a tela inicial (home) após login bem-sucedido
+  Future<void> _navigateToHome() async {
+    // Aqui você pode adicionar lógica adicional, se necessário, antes de navegar para a home
+    Modular.to.navigate(HomeNomeRotas.navigate);
   }
 }

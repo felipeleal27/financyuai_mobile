@@ -1,3 +1,3 @@
 abstract class SplashScreenRepository {
-  Future<bool> calcularSaldoTotal();
+  // Future<bool> calcularSaldoTotal();
 }
