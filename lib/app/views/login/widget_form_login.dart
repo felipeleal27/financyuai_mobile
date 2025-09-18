@@ -9,6 +9,7 @@ import 'package:neo_financyuai/app/viewmodel/login/login_viewmodel.dart';
 import 'package:neo_financyuai/app/views/registrar/module/registar_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/custom_text_form_field.dart';
 import 'package:neo_financyuai/app/widgets/theme_selector.dart';
+import 'package:neo_financyuai/app/widgets/oauth_button.dart';
 
 /// Widget de formulário de login customizado.
 /// 
@@ -481,18 +482,7 @@ class _WidgetFormLoginState extends State<WidgetFormLogin>
                         ),
                       ),
                     )
-                  : Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage(
-                            'https://developers.google.com/identity/images/g-logo.png',
-                          ),
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                    ),
+                  : const GoogleIcon(size: 20),
               label: Text(
                 widget.viewmodel.isLoading ? 'Entrando...' : 'Continuar com Google',
                 style: const TextStyle(

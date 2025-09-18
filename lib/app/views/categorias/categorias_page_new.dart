@@ -170,6 +170,7 @@ class _CategoriasPageState extends State<CategoriasPage> {
   void _showAdicionarCategoriaDialog(BuildContext context) {
     final nomeController = TextEditingController();
     String iconeSelecionado = 'category';
+    bool usuarioEscolheuIcone = false;
 
     showDialog(
       context: context,
@@ -196,6 +197,17 @@ class _CategoriasPageState extends State<CategoriasPage> {
                   hintText: 'Digite o nome da categoria',
                   prefixIcon: const Icon(Icons.category),
                   textCapitalization: TextCapitalization.words,
+                  onChanged: (value) {
+                    // Sugere um ícone automaticamente enquanto o usuário não escolheu manualmente
+                    if (!usuarioEscolheuIcone) {
+                      final suggestions = CategoryIconService.getSuggestedIcons(value);
+                      if (suggestions.isNotEmpty) {
+                        iconeSelecionado = suggestions.first;
+                        // ignore: invalid_use_of_protected_member
+                        (context as Element).markNeedsBuild();
+                      }
+                    }
+                  },
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -219,6 +231,7 @@ class _CategoriasPageState extends State<CategoriasPage> {
                           if (icone != null) {
                             setState(() {
                               iconeSelecionado = icone;
+                              usuarioEscolheuIcone = true;
                             });
                           }
                         },

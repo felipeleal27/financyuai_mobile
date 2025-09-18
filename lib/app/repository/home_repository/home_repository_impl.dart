@@ -12,6 +12,31 @@ import 'package:sqflite/sqflite.dart';
 /// Implementação do repositório de dados da tela principal
 /// Gerencia movimentações, categorias e sincronização com Firebase
 class HomeRepositoryImpl extends HomeRepository {
+
+  @override
+  Future<List<MovimentacaoModel>> getMovimentacoesTodas() async {
+    try {
+      final db = await DB.instance.database;
+      final userId = _authService.userId;
+      if (userId == null) {
+        if (kDebugMode) {
+          print('❌ getMovimentacoesTodas: userId nulo, retornando lista vazia');
+        }
+        return [];
+      }
+      final movimentacao = await CommandSql(db)
+          .select('movimentacao', where: 'IdUsuario = ?', whereArgs: [userId]);
+      if (kDebugMode) {
+        print('🔍 getMovimentacoesTodas: total = ${movimentacao.length}');
+      }
+      return movimentacao.map((e) => MovimentacaoModel.fromMap(e, sqlLite: true)).toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao buscar todas movimentações: $e');
+      }
+      return [];
+    }
+  }
   final LocalStorage _localStorage;
   final FirebaseSyncService _syncService;
   final AuthService _authService;
@@ -31,9 +56,14 @@ class HomeRepositoryImpl extends HomeRepository {
       final userId = _authService.userId;
 
       if (userId != null) {
+        if (kDebugMode) {
+          print('🟢 Salvando movimentação no Firebase para userId: $userId, id: ${movimentacao.id}');
+        }
         await _syncService.addMovimentacao(movimentacao, userId);
       } else {
-        // Fallback: apenas SQLite se não tiver userId
+        if (kDebugMode) {
+          print('🔴 userId está nulo! Salvando apenas localmente. Não irá para o Firebase.');
+        }
         final db = await DB.instance.database;
         final query = CommandSql(db);
         await query.insert('movimentacao', movimentacao.toMap());
@@ -43,6 +73,39 @@ class HomeRepositoryImpl extends HomeRepository {
     } catch (e) {
       if (kDebugMode) {
         print('❌ Erro ao salvar movimentação: $e');
+      }
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> atualizarMovimentacao(MovimentacaoModel movimentacao) async {
+    try {
+      final userId = _authService.userId;
+
+      if (userId != null) {
+        if (kDebugMode) {
+          print('🟡 Atualizando movimentação no Firebase para userId: $userId, id: ${movimentacao.id}');
+        }
+        await _syncService.updateMovimentacao(movimentacao, userId);
+      } else {
+        if (kDebugMode) {
+          print('🔴 userId está nulo! Atualizando apenas localmente.');
+        }
+        final db = await DB.instance.database;
+        final query = CommandSql(db);
+        await query.update(
+          'movimentacao',
+          movimentacao.toMap(),
+          where: 'Id = ?',
+          whereArgs: [movimentacao.id],
+        );
+      }
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erro ao atualizar movimentação: $e');
       }
       return false;
     }
@@ -328,18 +391,9 @@ class HomeRepositoryImpl extends HomeRepository {
   /// ✅ Sincroniza apenas transações com Firebase
   @override
   Future<void> syncMovimentacoesToFirebase() async {
-    try {
-      final userId = _authService.userId;
-      if (userId != null) {
-        await _syncService.syncTransacoesToFirebase(userId);
-        if (kDebugMode) {
-          print('✅ Transações sincronizadas com Firebase');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erro ao sincronizar transações: $e');
-      }
+    // Desativado: mantém apenas operações locais
+    if (kDebugMode) {
+      print('ℹ️ Sincronização de movimentações desativada');
     }
   }
 }

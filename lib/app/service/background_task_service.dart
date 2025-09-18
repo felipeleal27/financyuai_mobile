@@ -1,9 +1,8 @@
 import 'package:workmanager/workmanager.dart';
-import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
-import 'package:neo_financyuai/app/service/notification_service.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:neo_financyuai/firebase_options.dart';
+import 'package:neo_financyuai/app/service/ai_routine_service.dart';
+import 'package:neo_financyuai/app/service/ai_holiday_service.dart';
+import 'package:neo_financyuai/app/service/ai_balance_forecast_service.dart';
 
 /// Serviço responsável por gerenciar tarefas em segundo plano
 /// 
@@ -15,16 +14,26 @@ class BackgroundTaskService {
   static const String syncTask = 'sync_task';
   static const String reminderTask = 'reminder_task';
   static const String dailyReportTask = 'daily_report_task';
+  static const String aiRoutineTask = 'ai_routine_task';
 
   /// Inicializa as tarefas em segundo plano
   static Future<void> initialize() async {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: kDebugMode,
+      // Desativa debug para evitar qualquer notificação/log visível do plugin
+      isInDebugMode: false,
     );
 
-    // Agenda tarefas periódicas
-    await _schedulePeriodicTasks();
+    // Cancela quaisquer tarefas previamente agendadas (migração para modo sem notificações)
+    try {
+      await Workmanager().cancelAll();
+      if (kDebugMode) {
+        print('🧹 Workmanager: tarefas antigas canceladas');
+      }
+    } catch (_) {}
+
+  // Agenda tarefas periódicas (somente IA)
+  await _schedulePeriodicTasks();
     
     if (kDebugMode) {
       print('🔄 Background Tasks inicializadas');
@@ -33,61 +42,49 @@ class BackgroundTaskService {
 
   /// Agenda tarefas periódicas
   static Future<void> _schedulePeriodicTasks() async {
-    // Sincronização a cada 15 minutos
-    await Workmanager().registerPeriodicTask(
-      syncTask,
-      syncTask,
-      frequency: const Duration(minutes: 15),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-        requiresBatteryNotLow: false,
-        requiresCharging: false,
-        requiresDeviceIdle: false,
-        requiresStorageNotLow: false,
-      ),
-    );
+    // Agenda apenas a rotina de IA uma vez por dia, em uma janela da manhã.
+    try {
+  final initialDelay = _nextMorningDelay(hours: 9); // roda por volta das 09:00
+      await Workmanager().registerPeriodicTask(
+        aiRoutineTask,
+        aiRoutineTask,
+        frequency: const Duration(hours: 24),
+        initialDelay: initialDelay,
+        existingWorkPolicy: ExistingWorkPolicy.replace,
+        constraints: Constraints(
+          networkType: NetworkType.not_required,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+        ),
+        backoffPolicy: BackoffPolicy.linear,
+        backoffPolicyDelay: const Duration(minutes: 15),
+        tag: 'ai_routine',
+      );
+      if (kDebugMode) {
+        print('🤖 Workmanager: tarefa diária da IA agendada (em ~$initialDelay)');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Falha ao agendar tarefa da IA: $e');
+      }
+    }
+  }
 
-    // Lembrete diário às 20h
-    await Workmanager().registerPeriodicTask(
-      reminderTask,
-      reminderTask,
-      frequency: const Duration(hours: 24),
-      initialDelay: _getDelayUntil20h(),
-    );
-
-    // Relatório diário às 22h
-    await Workmanager().registerPeriodicTask(
-      dailyReportTask,
-      dailyReportTask,
-      frequency: const Duration(hours: 24),
-      initialDelay: _getDelayUntil22h(),
-    );
+  /// Calcula o delay até a próxima manhã (hora específica do dia seguinte, se já passou hoje)
+  static Duration _nextMorningDelay({int hours = 9, int minutes = 0}) {
+    final now = DateTime.now();
+    var target = DateTime(now.year, now.month, now.day, hours, minutes);
+    if (!target.isAfter(now)) {
+      target = target.add(const Duration(days: 1));
+    }
+    return target.difference(now);
   }
 
   /// Calcula delay até às 20h
-  static Duration _getDelayUntil20h() {
-    final now = DateTime.now();
-    final target = DateTime(now.year, now.month, now.day, 20, 0);
-    
-    if (target.isBefore(now)) {
-      // Se já passou das 20h hoje, agenda para amanhã
-      return target.add(const Duration(days: 1)).difference(now);
-    }
-    
-    return target.difference(now);
-  }
+  // Removido: cálculo de delay para 20h
 
   /// Calcula delay até às 22h
-  static Duration _getDelayUntil22h() {
-    final now = DateTime.now();
-    final target = DateTime(now.year, now.month, now.day, 22, 0);
-    
-    if (target.isBefore(now)) {
-      return target.add(const Duration(days: 1)).difference(now);
-    }
-    
-    return target.difference(now);
-  }
+  // Removido: cálculo de delay para 22h
 
   /// Cancela todas as tarefas
   static Future<void> cancelAllTasks() async {
@@ -106,75 +103,34 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       switch (task) {
+        case BackgroundTaskService.aiRoutineTask:
+          // Executa análises leves da IA (rotinas e feriados)
+          await AiRoutineService().runDailyAnalysis();
+          await AiHolidayService().runDailyAnalysis();
+          await AiBalanceForecastService().runDailyForecast();
+          return Future.value(true);
         case BackgroundTaskService.syncTask:
-          await _executeSyncTask();
-          break;
-          
         case BackgroundTaskService.reminderTask:
-          await _executeReminderTask();
-          break;
-          
         case BackgroundTaskService.dailyReportTask:
-          await _executeDailyReportTask();
-          break;
+          // Tarefas antigas permanecem desativadas; não executar
+          return Future.value(true);
+        default:
+          // Desconhecido: não faz nada
+          return Future.value(true);
       }
-      
-      return Future.value(true);
     } catch (e) {
       if (kDebugMode) {
-        print('Erro na tarefa $task: $e');
+        print('Erro no Workmanager task=$task: $e');
       }
-      return Future.value(false);
+      return Future.value(true);
     }
   });
 }
 
-/// Executa sincronização em segundo plano
-Future<void> _executeSyncTask() async {
-  try {
-    // Inicializa Firebase se necessário
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    
-    final syncService = FirebaseSyncService();
-    await syncService.forcSync();
-    
-    if (kDebugMode) {
-      print('🔄 Sincronização em background executada');
-    }
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erro na sincronização background: $e');
-    }
-  }
-}
+// Removido: sincronização em segundo plano desativada
 
 /// Executa lembrete diário
-Future<void> _executeReminderTask() async {
-  final notificationService = NotificationService();
-  await notificationService.reminderAddTransaction();
-  
-  if (kDebugMode) {
-    print('🔔 Lembrete diário enviado');
-  }
-}
+// Removido: lembrete diário desativado
 
 /// Executa relatório diário
-Future<void> _executeDailyReportTask() async {
-  // Aqui você pode calcular estatísticas do dia
-  // e enviar uma notificação com o resumo
-  
-  final notificationService = NotificationService();
-  
-  // Exemplo: calcula gastos do dia
-  // final today = DateTime.now();
-  // final dailyExpenses = await calculateDailyExpenses(today);
-  
-  // Usando método público da NotificationService
-  await notificationService.notifyMonthlyReport();
-  
-  if (kDebugMode) {
-    print('📊 Relatório diário gerado');
-  }
-}
+// Removido: relatório diário desativado

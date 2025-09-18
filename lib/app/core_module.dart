@@ -14,6 +14,7 @@ import 'package:neo_financyuai/app/service/auth_service.dart';
 import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:neo_financyuai/app/utils/theme_manager.dart';
 import 'package:neo_financyuai/app/viewmodel/home/home_viewmodel.dart';
+import 'package:neo_financyuai/app/viewmodel/nova_transacao/nova_transacao_viewmodel.dart';
 
 /// Módulo central da aplicação.
 /// 
@@ -51,5 +52,6 @@ class CoreModule extends Module {
     
     // ViewModels
     i.addSingleton(HomeViewmodel.new);
+    i.addLazySingleton(NovaTransacaoViewmodel.new);
   }
 }

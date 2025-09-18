@@ -2,6 +2,8 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:neo_financyuai/app/core_module.dart';
 import 'package:neo_financyuai/app/views/home/home_page.dart';
 import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_module.dart';
+import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_nome_rotas.dart';
 
 /// Módulo responsável pela configuração da Home.
 /// 
@@ -22,5 +24,6 @@ class HomeModule extends Module {
   void routes(RouteManager r) {
     r.child(HomeNomeRotas.inicial, child: (context) => const HomePage());
     // r.module("${HomeNomeRotas.inicial}${ConfiguracoesNomeRotas.modulo}", module: ConfiguracoesModule());
+    r.module("${HomeNomeRotas.inicial}${NovaTransacaoNomeRotas.modulo}", module: NovaTransacaoModule());
   }
 }

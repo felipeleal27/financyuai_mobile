@@ -16,6 +16,8 @@ import 'package:timezone/data/latest.dart' as tz;
 /// - Diferentes tipos de notificações financeiras
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+  // Flag global para desativar todas as notificações
+  static const bool _enabled = false;
   
   /// Retorna a instância singleton do serviço
   factory NotificationService() => _instance;
@@ -27,6 +29,12 @@ class NotificationService {
 
   /// Inicializa o serviço de notificações
   Future<void> initialize() async {
+    if (!_enabled) {
+      if (kDebugMode) debugPrint('🔕 Notificações desativadas globalmente');
+      // Tentar cancelar qualquer notificação pré-existente
+      try { await _localNotifications.cancelAll(); } catch (_) {}
+      return;
+    }
     // Inicializa timezone para notificações agendadas
     tz.initializeTimeZones();
     
@@ -92,7 +100,7 @@ class NotificationService {
 
   /// Inicializa notificações locais
   Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -154,8 +162,16 @@ class NotificationService {
 
   /// Manipula notificação quando app está em foreground
   void _handleForegroundMessage(RemoteMessage message) {
+    if (!_enabled) return;
     if (kDebugMode) {
       debugPrint('Mensagem recebida em foreground: ${message.notification?.title}');
+    }
+    // Suprime notificações relacionadas à sincronização
+    if (_isSyncRelated(message.data, message.notification)) {
+      if (kDebugMode) {
+        debugPrint('🔕 Notificação de sincronização suprimida (foreground)');
+      }
+      return;
     }
 
     _showLocalNotification(
@@ -167,8 +183,16 @@ class NotificationService {
 
   /// Manipula quando app é aberto via notificação
   void _handleMessageOpenedApp(RemoteMessage message) {
+    if (!_enabled) return;
     if (kDebugMode) {
       debugPrint('App aberto via notificação: ${message.data}');
+    }
+    // Ignora navegação se a notificação for de sincronização
+    if (_isSyncRelated(message.data, message.notification)) {
+      if (kDebugMode) {
+        debugPrint('🔕 Abertura de notificação de sincronização ignorada');
+      }
+      return;
     }
     
     // Navegar para tela específica baseado no tipo
@@ -189,13 +213,21 @@ class NotificationService {
     Map<String, dynamic>? data,
     int id = 0,
   }) async {
+    if (!_enabled) return;
+    // Segurança extra: não mostra locais se marcadas como sincronização
+    if (_isSyncRelated(data ?? const {}, null)) {
+      if (kDebugMode) {
+        debugPrint('🔕 Notificação local de sincronização suprimida');
+      }
+      return;
+    }
     const androidDetails = AndroidNotificationDetails(
       'financyuai_channel',
       'FinancYuAI Notificações',
       channelDescription: 'Notificações do app FinancYuAI',
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
+      icon: '@mipmap/launcher_icon',
       color: Color(0xFF2196F3),
       playSound: true,
       enableVibration: true,
@@ -243,6 +275,7 @@ class NotificationService {
 
   /// Notificação de meta atingida
   Future<void> notifyGoalReached(String goalName, double amount) async {
+    if (!_enabled) return;
     await _showLocalNotification(
       id: 1,
       title: '🎯 Meta Atingida!',
@@ -253,6 +286,7 @@ class NotificationService {
 
   /// Lembrete para adicionar transação
   Future<void> reminderAddTransaction() async {
+    if (!_enabled) return;
     await _showLocalNotification(
       id: 3,
       title: '💰 Lembrete',
@@ -263,6 +297,7 @@ class NotificationService {
 
   /// Relatório mensal disponível
   Future<void> notifyMonthlyReport() async {
+    if (!_enabled) return;
     await _showLocalNotification(
       id: 4,
       title: '📊 Relatório Mensal',
@@ -273,6 +308,7 @@ class NotificationService {
 
   /// Notificação de gasto alto
   Future<void> notifyHighExpense(double amount) async {
+    if (!_enabled) return;
     await _showLocalNotification(
       id: 2,
       title: '⚠️ Gasto Alto Detectado',
@@ -287,6 +323,7 @@ class NotificationService {
     required double currentExpenses,
     required String category,
   }) async {
+    if (!_enabled) return;
     final percentage = (currentExpenses / budgetLimit * 100).round();
     
     await _showLocalNotification(
@@ -304,6 +341,7 @@ class NotificationService {
 
   /// Notificação de economia conquistada
   Future<void> notifySavingsAchieved(double savedAmount) async {
+    if (!_enabled) return;
     await _showLocalNotification(
       id: 6,
       title: '🎉 Economia Conquistada!',
@@ -314,6 +352,7 @@ class NotificationService {
 
   /// Configura lembretes automáticos financeiros
   Future<void> setupFinancialReminders() async {
+    if (!_enabled) return;
     // Lembrete diário às 20h para registrar transações
     await scheduleDailyReminder(
       hour: 20,
@@ -337,6 +376,108 @@ class NotificationService {
     }
   }
 
+  /// Envia uma notificação local de teste, independentemente do flag global.
+  /// Útil para validar visualmente o sistema de notificação no dispositivo.
+  Future<void> sendTestNotification() async {
+    try {
+      // Garante permissões locais mínimas (Android 13+)
+      await _requestLocalPermissions();
+      // Inicializa o plugin local se necessário (idempotente)
+      await _initializeLocalNotifications();
+      // Notificação simples, apenas com o small icon (launcher)
+      const androidDetails = AndroidNotificationDetails(
+        'financyuai_channel',
+        'FinancYuAI Notificações',
+        channelDescription: 'Notificações do app FinancYuAI',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/launcher_icon',
+      );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+      await _localNotifications.show(
+        9999,
+        'Notificação de Teste',
+        'Isto é apenas um teste de notificação do FinancyUai.',
+        details,
+        payload: 'test_notification',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Falha ao enviar notificação de teste: $e');
+      }
+    }
+  }
+
+  /// Envia uma notificação simples (título e descrição), sempre permitida.
+  /// Usa o mesmo template visual da de teste (apenas ícone pequeno do app).
+  Future<void> sendSimpleNotification({
+    required String title,
+    required String body,
+    int id = 10000,
+  }) async {
+    try {
+      if (kDebugMode) {
+        debugPrint('🔔 IA sendSimpleNotification: "$title" - iniciando envio');
+      }
+      await _requestLocalPermissions();
+      await _initializeLocalNotifications();
+
+      const androidDetails = AndroidNotificationDetails(
+        'financyuai_channel',
+        'FinancYuAI Notificações',
+        channelDescription: 'Notificações do app FinancYuAI',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/launcher_icon',
+        color: Color(0xFF2196F3),
+      );
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+      await _localNotifications.show(
+        id,
+        title,
+        body,
+        details,
+        payload: 'ai_simple_notification',
+      );
+      if (kDebugMode) {
+        debugPrint('✅ IA notificação simples exibida (id=$id)');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Falha ao enviar notificação simples: $e');
+      }
+    }
+  }
+
+  Future<void> _requestLocalPermissions() async {
+    try {
+      if (Platform.isAndroid) {
+        await _localNotifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestExactAlarmsPermission();
+        await _localNotifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            ?.requestNotificationsPermission();
+      }
+      // iOS: as permissões são pedidas no _initializeLocalNotifications (DarwinInitializationSettings)
+    } catch (_) {}
+  }
+
+  // Sem utilitários de imagem: notificação de teste usa apenas o ícone pequeno
+
   /// Agenda lembrete diário (ex: todo dia às 20h)
   Future<void> scheduleDailyReminder({
     required int hour,
@@ -345,6 +486,7 @@ class NotificationService {
     required String body,
     Map<String, dynamic>? data,
   }) async {
+    if (!_enabled) return;
     final now = DateTime.now();
     var scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
     
@@ -394,6 +536,26 @@ class NotificationService {
   /// Cancela todas as notificações
   Future<void> cancelAllNotifications() async {
     await _localNotifications.cancelAll();
+  }
+
+  /// Determina se a notificação é relacionada a sincronização (para suprimir)
+  bool _isSyncRelated(Map<String, dynamic> data, RemoteNotification? notification) {
+    final type = (data['type'] ?? data['notification_type'] ?? '').toString().toLowerCase();
+    if (type.contains('sync') ||
+        type.contains('sincronizacao') ||
+        type.contains('sincronização') ||
+        type.contains('firebase_sync') ||
+        type.contains('background_sync')) {
+      return true;
+    }
+
+    final title = (notification?.title ?? data['title'] ?? '').toString().toLowerCase();
+    final body = (notification?.body ?? data['body'] ?? '').toString().toLowerCase();
+    bool containsSyncKeyword(String s) =>
+        s.contains('sincroniz') || // cobre sincroniza/sincronização
+        s.contains('sync');
+
+    return containsSyncKeyword(title) || containsSyncKeyword(body);
   }
 }
 

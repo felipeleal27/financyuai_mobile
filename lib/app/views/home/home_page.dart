@@ -6,16 +6,17 @@ import 'package:neo_financyuai/app/data/model/categoria_model.dart';
 import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/viewmodel/home/home_viewmodel.dart';
+import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/home/widgets/app_bar_container.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/bottom_navigation_bat.dart';
-import 'package:neo_financyuai/app/widgets/custom_date_container.dart';
-import 'package:neo_financyuai/app/widgets/custom_dialog_drop_down.dart';
-import 'package:neo_financyuai/app/widgets/custom_text_form_field.dart';
 import 'package:neo_financyuai/app/widgets/draggable_chat_bubble.dart';
 import 'package:neo_financyuai/app/widgets/chat_ia_dialog.dart';
 import 'package:neo_financyuai/app/service/category_icon_service.dart';
+import 'package:neo_financyuai/app/service/notification_service.dart';
+import 'package:neo_financyuai/app/service/ai_debug_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,9 +26,861 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  void _showDetalhesTransacaoModal(
+    BuildContext context,
+    MovimentacaoModel movimentacao,
+  ) {
+    final helper = AppThemeHelper.of(context);
+    final categoria = viewmodel.categoria.firstWhere(
+      (e) => movimentacao.idCategoria == e.id,
+      orElse:
+          () => CategoriaModel(
+            id: 0,
+            nome: 'Categoria não encontrada',
+            icone: 'category',
+          ),
+    );
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (modalContext) {
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(modalContext).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: helper.onSurfaceColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        movimentacao.isSaida
+                            ? helper.despesaIconColor
+                            : helper.receitaIconColor,
+                    child: Icon(
+                      CategoryIconService.getIconData(categoria.icone),
+                      color: helper.colorScheme.onPrimary,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          movimentacao.nome,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: helper.onSurfaceColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          categoria.nome,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            color: helper.onSurfaceColor.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 18,
+                    color: helper.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat(
+                      'dd/MM/yyyy',
+                    ).format(movimentacao.dataMovimentacao),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: helper.onSurfaceColor,
+                    ),
+                  ),
+                  // Se quiser mostrar recorrência/parcelamento, adicione lógica aqui conforme o modelo
+                  // Exemplo: const SizedBox(width: 18), ...
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Icon(
+                    Icons.attach_money,
+                    size: 18,
+                    color: helper.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    viewmodel.canSeeValue
+                        ? NumberFormat.currency(
+                          locale: 'pt_BR',
+                          symbol: 'R\$',
+                          decimalDigits: 2,
+                        ).format(movimentacao.valor)
+                        : 'R\$ ***',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          movimentacao.isSaida
+                              ? helper.despesaValueColor
+                              : helper.receitaValueColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(modalContext).pop();
+                        _showRemoverTransacaoBottomSheet(context, movimentacao);
+                      },
+                      icon: Icon(
+                        Icons.delete,
+                        color: helper.colorScheme.onError,
+                      ),
+                      label: Text(
+                        'Remover',
+                        style: TextStyle(color: helper.colorScheme.onError),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: helper.colorScheme.error,
+                        foregroundColor: helper.colorScheme.onError,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(modalContext).pop();
+                        await showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (ctx) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: helper.colorScheme.surface,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                              ),
+                              child: SafeArea(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Handle
+                                      Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: helper.onSurfaceColor.withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      Text(
+                                        'Ações da Transação',
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: helper.onSurfaceColor,
+                                          fontFamily: 'Poppins',
+                                        ),
+                                      ),
+                                      const SizedBox(height: 24),
+                                      // Botão Editar
+                                      _buildActionButton(
+                                        ctx,
+                                        icon: Icons.edit_outlined,
+                                        title: 'Editar Transação',
+                                        subtitle: 'Modificar dados desta transação',
+                                        color: helper.colorScheme.primary,
+                                        onTap: () {
+                                          Navigator.of(ctx).pop();
+                                          _editarTransacao(context, movimentacao);
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      // Botão Duplicar
+                                      _buildActionButton(
+                                        ctx,
+                                        icon: Icons.copy_outlined,
+                                        title: 'Duplicar Transação',
+                                        subtitle: 'Criar uma cópia desta transação',
+                                        color: helper.colorScheme.secondary,
+                                        onTap: () {
+                                          Navigator.of(ctx).pop();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Funcionalidade de duplicar em breve!')),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      // Botão Compartilhar
+                                      _buildActionButton(
+                                        ctx,
+                                        icon: Icons.share_outlined,
+                                        title: 'Compartilhar',
+                                        subtitle: 'Enviar detalhes por mensagem',
+                                        color: Colors.blue,
+                                        onTap: () {
+                                          Navigator.of(ctx).pop();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Funcionalidade de compartilhar em breve!')),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 24),
+                                      // Botão Cancelar
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: TextButton(
+                                          onPressed: () => Navigator.of(ctx).pop(),
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Cancelar',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: helper.onSurfaceColor.withOpacity(0.7),
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      icon: Icon(
+                        Icons.more_horiz,
+                        color: helper.colorScheme.onSecondary,
+                      ),
+                      label: Text(
+                        'Mais',
+                        style: TextStyle(color: helper.colorScheme.onSecondary),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: helper.colorScheme.secondary,
+                        foregroundColor: helper.colorScheme.onSecondary,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButtonStatic(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color onSurfaceColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: onSurfaceColor.withOpacity(0.7),
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: onSurfaceColor.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final helper = AppThemeHelper.of(context);
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: helper.onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: helper.onSurfaceColor.withOpacity(0.7),
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: helper.onSurfaceColor.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRemoverTransacaoBottomSheet(
+    BuildContext context,
+    MovimentacaoModel movimentacao,
+  ) {
+    final id = movimentacao.id ?? '';
+    final isRecorrente = id.contains('_parcela_') || id.contains('_fixa_');
+    
+    if (!isRecorrente) {
+      _showConfirmDeleteDialog(context, movimentacao);
+      return;
+    }
+    
+    // Captura os valores do helper antes de abrir o modal
+    final helper = AppThemeHelper.of(context);
+    final surfaceColor = helper.colorScheme.surface;
+    final onSurfaceColor = helper.onSurfaceColor;
+    final errorColor = helper.colorScheme.error;
+    
+    showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) {
+        return Container(
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: onSurfaceColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // Ícone de aviso
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: errorColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(32),
+                    ),
+                    child: Icon(
+                      Icons.warning_rounded,
+                      size: 32,
+                      color: errorColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Remover Transação',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: onSurfaceColor,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Como você deseja remover esta transação?',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: onSurfaceColor.withOpacity(0.7),
+                      fontFamily: 'Poppins',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  // Opção: Apenas este mês
+                  _buildRemoveOptionStatic(
+                    modalContext,
+                    icon: Icons.event_outlined,
+                    title: 'Apenas este mês',
+                    subtitle: 'Remove somente esta ocorrência',
+                    color: Colors.orange,
+                    value: 'apenas_esta',
+                    onSurfaceColor: onSurfaceColor,
+                  ),
+                  const SizedBox(height: 12),
+                  // Opção: A partir deste mês
+                  _buildRemoveOptionStatic(
+                    modalContext,
+                    icon: Icons.arrow_forward_outlined,
+                    title: 'A partir deste mês',
+                    subtitle: 'Remove esta e as próximas ocorrências',
+                    color: Colors.amber.shade700,
+                    value: 'desta_pra_frente',
+                    onSurfaceColor: onSurfaceColor,
+                  ),
+                  const SizedBox(height: 12),
+                  // Opção: Todas relacionadas
+                  _buildRemoveOptionStatic(
+                    modalContext,
+                    icon: Icons.delete_forever_outlined,
+                    title: 'Excluir definitivamente',
+                    subtitle: 'Remove todas as ocorrências relacionadas',
+                    color: errorColor,
+                    value: 'todas_relacionadas',
+                    onSurfaceColor: onSurfaceColor,
+                  ),
+                  const SizedBox(height: 24),
+                  // Botão Cancelar
+                  SizedBox(
+                    width: double.infinity,
+                    child: TextButton(
+                      onPressed: () => Navigator.of(modalContext).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: onSurfaceColor.withOpacity(0.7),
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).then((result) async {
+      if (result != null) {
+        // Mostra confirmação antes de executar a ação
+        _showConfirmDeleteDialog(context, movimentacao, result);
+      }
+    });
+  }
+
+  void _editarTransacao(
+    BuildContext context,
+    MovimentacaoModel movimentacao,
+  ) {
+    // Agora sempre abrimos a tela de edição; o escopo da edição será
+    // escolhido no momento de salvar na tela de edição.
+    _abrirEdicaoTransacao(context, movimentacao);
+  }
+
+
+  void _abrirEdicaoTransacao(
+    BuildContext context,
+    MovimentacaoModel movimentacao, {
+    String? tipoEdicao,
+  }) {
+    // Por enquanto, vamos navegar para a nova transação passando os dados
+    // Em uma implementação futura, isso poderia ser uma página específica de edição
+    final rota = movimentacao.isSaida 
+      ? '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateDespesa}'
+      : '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateReceita}';
+      
+    // Navegar passando os dados da transação como argumentos
+    Modular.to.pushNamed(rota, arguments: {
+      'movimentacao': movimentacao,
+      'isEdicao': true,
+      'tipoEdicao': tipoEdicao,
+    }).then((_) async {
+      // Recarrega as transações após a edição
+      await viewmodel.carregarMovimentacoes();
+      (_appBarKey.currentState as dynamic)?.atualizarSaldo();
+    });
+  }
+
+  void _showConfirmDeleteDialog(
+    BuildContext context,
+    MovimentacaoModel movimentacao, [
+    String? tipoRemocao,
+  ]) {
+    final helper = AppThemeHelper.of(context);
+    
+    // Define o texto baseado no tipo de remoção
+    String titulo = 'Confirmar Exclusão';
+    String mensagem;
+    String botaoConfirmar = 'Excluir';
+    
+    switch (tipoRemocao) {
+      case 'apenas_esta':
+        mensagem = 'Tem certeza que deseja excluir apenas esta ocorrência da transação "${movimentacao.nome}"?';
+        break;
+      case 'desta_pra_frente':
+        mensagem = 'Tem certeza que deseja excluir esta e todas as próximas ocorrências da transação "${movimentacao.nome}"?';
+        break;
+      case 'todas_relacionadas':
+        mensagem = 'Tem certeza que deseja excluir DEFINITIVAMENTE todas as ocorrências da transação "${movimentacao.nome}"?';
+        botaoConfirmar = 'Excluir Tudo';
+        break;
+      default:
+        mensagem = 'Tem certeza que deseja excluir a transação "${movimentacao.nome}"?';
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_rounded,
+                color: helper.colorScheme.error,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: helper.onSurfaceColor,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            mensagem,
+            style: TextStyle(
+              fontSize: 16,
+              color: helper.onSurfaceColor.withOpacity(0.8),
+              fontFamily: 'Poppins',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                'Cancelar',
+                style: TextStyle(
+                  color: helper.onSurfaceColor.withOpacity(0.7),
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                
+                // Executa a remoção baseada no tipo
+                switch (tipoRemocao) {
+                  case 'apenas_esta':
+                    await viewmodel.removerMovimentacao(movimentacao);
+                    break;
+                  case 'desta_pra_frente':
+                    await viewmodel.removerTransacoesDestaPraFrente(movimentacao);
+                    break;
+                  case 'todas_relacionadas':
+                    await viewmodel.removerTransacoesRelacionadas(movimentacao);
+                    break;
+                  default:
+                    // Transação única
+                    await viewmodel.removerMovimentacao(movimentacao);
+                }
+                
+                // Atualiza o saldo
+                (_appBarKey.currentState as dynamic)?.atualizarSaldo();
+                
+                // Mostra confirmação
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        tipoRemocao == 'todas_relacionadas' 
+                          ? 'Todas as ocorrências foram excluídas'
+                          : tipoRemocao == 'desta_pra_frente'
+                            ? 'Transações a partir desta data foram excluídas'
+                            : 'Transação excluída com sucesso',
+                      ),
+                      backgroundColor: helper.colorScheme.primary,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: helper.colorScheme.error,
+                foregroundColor: helper.colorScheme.onError,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                botaoConfirmar,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRemoveOptionStatic(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required String value,
+    required Color onSurfaceColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(value),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: onSurfaceColor,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: onSurfaceColor.withOpacity(0.7),
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: onSurfaceColor.withOpacity(0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   final viewmodel = Modular.get<HomeViewmodel>();
-  late TextEditingController textEditingController = TextEditingController();
-  late TextEditingController valorController = TextEditingController();
   final GlobalKey<State<AppBarContainer>> _appBarKey =
       GlobalKey<State<AppBarContainer>>();
 
@@ -125,10 +978,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(modalContext).pop();
-                      showDialogNovaMovimentacao(
-                        context,
-                        false,
-                      ); // Usa context original
+                      Modular.to
+                          .pushNamed(
+                            '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateReceita}',
+                          )
+                          .then((_) async {
+                            await viewmodel.carregarMovimentacoes();
+                            (_appBarKey.currentState as dynamic)
+                                ?.atualizarSaldo();
+                          });
                     },
                     icon: Icon(
                       Icons.trending_up,
@@ -162,7 +1020,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.of(modalContext).pop();
-                      showDialogNovaMovimentacao(context, true);
+                      Modular.to
+                          .pushNamed(
+                            '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateDespesa}',
+                          )
+                          .then((_) async {
+                            await viewmodel.carregarMovimentacoes();
+                            (_appBarKey.currentState as dynamic)
+                                ?.atualizarSaldo();
+                          });
                     },
                     icon: Icon(
                       Icons.trending_down,
@@ -203,229 +1069,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 8),
               ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void showDialogNovaMovimentacao(BuildContext context, bool isDespesa) {
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    final helper = AppThemeHelper.of(context); // Captura helper ANTES do modal
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      backgroundColor: helper.modalBackgroundColor, // Usa helper capturado
-      builder: (modalContext) {
-        // Usa modalContext para evitar conflitos
-        return Form(
-          key: formKey,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                top: 24.0,
-                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 16.0,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child:
-                        isDespesa
-                            ? Text(
-                              'Nova Despesa',
-                              style: TextStyle(
-                                fontSize: 24.0,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    helper
-                                        .onSurfaceColor, // Usa helper capturado
-                              ),
-                            )
-                            : Text(
-                              'Nova Receita',
-                              style: TextStyle(
-                                fontSize: 24.0,
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    helper
-                                        .onSurfaceColor, // Usa helper capturado
-                              ),
-                            ),
-                  ),
-                  const SizedBox(height: 24.0),
-                  CustomTextFormField(
-                    labelText: 'Nome Movimentação',
-                    hintText: 'Digite um nome para movimentação',
-                    controller: TextEditingController(),
-                    prefixIcon: const Icon(Icons.edit),
-                    onChanged: (value) {
-                      viewmodel.setNomeMovimentacao(value);
-                    },
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 14.0),
-                  CustomTextFormField(
-                    labelText: 'Valor',
-                    hintText: 'Digite o valor',
-                    controller: valorController,
-                    isCurrency: true,
-                    onChanged: (value) {
-                      // Remove pontos de separadores de milhar
-                      final rawValue = value.replaceAll('.', '');
-
-                      // Substitui vírgula por ponto
-                      final formattedValue = rawValue.replaceAll(',', '.');
-
-                      // Tenta parsear o valor para double
-                      final parsedValue =
-                          double.tryParse(formattedValue) ?? 0.0;
-
-                      // Atualiza o valor no viewmodel
-                      if (isDespesa) {
-                        viewmodel.setValor(-parsedValue);
-                      } else {
-                        viewmodel.setValor(parsedValue);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 14.0),
-                  CustomDateContainer(
-                    labelText: 'Data',
-                    dataSelecionada: viewmodel.dataSelecionada,
-                    onTap: () async {
-                      DateTime? selectedDate = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 365),
-                        ),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (selectedDate != null) {
-                        viewmodel.setDataSelecionada(selectedDate);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 14.0),
-                  Observer(
-                    builder:
-                        (_) => CustomDialogDropdown<CategoriaModel>(
-                          items: viewmodel.categoria,
-                          itemSelected: viewmodel.categoriaSelecionada,
-                          onChange: (categoria) {
-                            viewmodel.setCategoria(categoria);
-                          },
-                          itemLabel: (categoria) => categoria.nome,
-                          labelText: 'Categoria',
-                          validator:
-                              (value) =>
-                                  value == null
-                                      ? "Selecione uma categoria"
-                                      : null,
-                          formkey: formKey,
-                        ),
-                  ),
-                  const SizedBox(height: 14.0),
-                  CustomTextFormField(
-                    labelText: 'Descrição',
-                    hintText: 'Descrição',
-                    controller: TextEditingController(),
-                    prefixIcon: const Icon(Icons.description),
-                    onChanged: (value) {},
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 16.0),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: Text(
-                            'Cancelar',
-                            style: TextStyle(
-                              fontSize: 16.0,
-                              color:
-                                  helper
-                                      .errorColor, // Cor adaptativa para cancelar
-                            ),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (formKey.currentState!.validate()) {
-                              // Define se é saída baseado no tipo de movimentação
-                              viewmodel.setIsSaida(isDespesa);
-
-                              final movimentacao =
-                                  viewmodel.createMovimentacaoFromForm();
-
-                              if (movimentacao != null) {
-                                // Salva no banco de dados e sincroniza (já adiciona na lista automaticamente)
-                                await viewmodel.gravarMovimentacao(
-                                  movimentacao,
-                                );
-
-                                // Atualiza o saldo no AppBar
-                                (_appBarKey.currentState as dynamic)
-                                    ?.atualizarSaldo();
-
-                                // Limpa o form e fecha o modal
-                                valorController.clear();
-                                Modular.to.pop();
-                              } else {
-                                // Mostra erro se não conseguir criar a movimentação
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Erro: Usuário não autenticado ou dados inválidos',
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0XFF7AE49A),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                              side: const BorderSide(
-                                color: Colors.black,
-                              ), // Added black border
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 14.0,
-                              horizontal: 24.0,
-                            ),
-                            elevation: 6.0,
-                          ),
-                          child: const Text(
-                            'Confirmar',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0XFF005218),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         );
@@ -730,6 +1373,89 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         _showFilterModal(context);
                       },
                     ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await NotificationService()
+                                    .sendTestNotification();
+                              },
+                              icon: const Icon(
+                                Icons.notifications_active_outlined,
+                              ),
+                              label: const Text('Testar notificação'),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                            // Debug IA: Rodar agora
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                await AiDebugService().runAllNow();
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'IA executada agora (rotinas, feriados, previsão)',
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.play_circle_outline),
+                              label: const Text('Rodar IA agora'),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                            // Debug IA: Reset flags
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final removed =
+                                    await AiDebugService().resetIaFlags();
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Flags de IA limpas: $removed',
+                                    ),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(
+                                Icons.cleaning_services_outlined,
+                              ),
+                              label: const Text('Resetar flags IA'),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     barraDePesquisa(helper),
                   ],
                 ),
@@ -903,210 +1629,321 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 .despesaValueColor // Valor vermelho adaptativo para DESPESA
             : helper.receitaValueColor; // Valor verde adaptativo para RECEITA
 
-    return Observer(
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          child: Material(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(14),
-            elevation: helper.brightness == Brightness.light ? 2 : 0,
-            shadowColor: Colors.black.withOpacity(0.07),
-            child: Slidable(
-              endActionPane: ActionPane(
-                motion: const ScrollMotion(),
-                extentRatio: 0.4,
-                children: [
-                  CustomSlidableAction(
-                    onPressed: (context) async {
-                      // Confirmação antes de remover
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder:
-                            (context) => AlertDialog(
-                              title: const Text('Remover Transação'),
-                              content: Text(
-                                'Deseja remover "${movimentacao.nome}"?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed:
-                                      () => Navigator.of(context).pop(false),
-                                  child: const Text('Cancelar'),
-                                ),
-                                TextButton(
-                                  onPressed:
-                                      () => Navigator.of(context).pop(true),
-                                  child: const Text('Remover'),
-                                ),
-                              ],
-                            ),
-                      );
+    // Captura as cores necessárias para o Slidable para evitar problemas de contexto
+    final errorColor = helper.colorScheme.error;
+    final onErrorColor = helper.colorScheme.onError;
+    final secondaryColor = helper.colorScheme.secondary;
+    final onSecondaryColor = helper.colorScheme.onSecondary;
+    final surfaceColor = helper.colorScheme.surface;
+    final onSurfaceColor = helper.onSurfaceColor;
+    final primaryColor = helper.colorScheme.primary;
+    final brightness = helper.brightness;
 
-                      if (confirmed == true) {
-                        await viewmodel.removerMovimentacao(movimentacao);
-                        // Atualiza o saldo no AppBar após remover
-                        (_appBarKey.currentState as dynamic)?.atualizarSaldo();
-                      }
-                    },
-                    padding: EdgeInsets.zero,
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: helper.colorScheme.error,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(15),
-                          bottomLeft: Radius.circular(15),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.delete,
-                            color: helper.colorScheme.onError,
-                            size: 24,
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Remover',
-                            style: TextStyle(
-                              color: helper.colorScheme.onError,
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      child: Slidable(
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          extentRatio: 0.4,
+          children: [
+            CustomSlidableAction(
+              onPressed: (slidableContext) async {
+                _showRemoverTransacaoBottomSheet(context, movimentacao);
+              },
+              padding: EdgeInsets.zero,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: errorColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(15),
+                    bottomLeft: Radius.circular(15),
                   ),
-                  CustomSlidableAction(
-                    onPressed: (context) {},
-                    padding: EdgeInsets.zero,
-                    child: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: helper.colorScheme.secondary,
-                        borderRadius: const BorderRadius.only(
-                          topRight: Radius.circular(15),
-                          bottomRight: Radius.circular(15),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.more_horiz,
-                            color: helper.colorScheme.onSecondary,
-                            size: 24,
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            'Mais',
-                            style: TextStyle(
-                              color: helper.colorScheme.onSecondary,
-                              fontSize: 12,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.delete,
+                      color: onErrorColor,
+                      size: 24,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Text(
+                      'Remover',
+                      style: TextStyle(
+                        color: onErrorColor,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {},
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: iconBg,
-                            child: Icon(
-                              CategoryIconService.getIconData(
-                                viewmodel.categoria
-                                    .firstWhere(
-                                      (e) => movimentacao.idCategoria == e.id,
-                                      orElse:
-                                          () => CategoriaModel(
-                                            id: 0,
-                                            nome: 'Categoria não encontrada',
-                                            icone: 'category',
-                                          ),
-                                    )
-                                    .icone,
-                              ),
-                              color: helper.colorScheme.onPrimary,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            CustomSlidableAction(
+              onPressed: (slidableContext) async {
+                await showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                movimentacao.nome,
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: helper.onSurfaceColor,
+                              // Handle
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: onSurfaceColor.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 24),
                               Text(
-                                viewmodel.categoria
-                                    .firstWhere(
-                                      (e) => movimentacao.idCategoria == e.id,
-                                      orElse:
-                                          () => CategoriaModel(
-                                            id: 0,
-                                            nome: 'Categoria não encontrada',
-                                          ),
-                                    )
-                                    .nome,
+                                'Ações da Transação',
                                 style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: onSurfaceColor,
                                   fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  color: helper.onSurfaceColor.withOpacity(0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              // Botão Editar
+                              _buildActionButtonStatic(
+                                ctx,
+                                icon: Icons.edit_outlined,
+                                title: 'Editar Transação',
+                                subtitle: 'Modificar dados desta transação',
+                                color: primaryColor,
+                                onSurfaceColor: onSurfaceColor,
+                                onTap: () {
+                                  Navigator.of(ctx).pop();
+                                  _editarTransacao(context, movimentacao);
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              // Botão Duplicar
+                              _buildActionButtonStatic(
+                                ctx,
+                                icon: Icons.copy_outlined,
+                                title: 'Duplicar Transação',
+                                subtitle: 'Criar uma cópia desta transação',
+                                color: secondaryColor,
+                                onSurfaceColor: onSurfaceColor,
+                                onTap: () {
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Funcionalidade de duplicar em breve!')),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              // Botão Compartilhar
+                              _buildActionButtonStatic(
+                                ctx,
+                                icon: Icons.share_outlined,
+                                title: 'Compartilhar',
+                                subtitle: 'Enviar detalhes por mensagem',
+                                color: Colors.blue,
+                                onSurfaceColor: onSurfaceColor,
+                                onTap: () {
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Funcionalidade de compartilhar em breve!')),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                              // Botão Cancelar
+                              SizedBox(
+                                width: double.infinity,
+                                child: TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancelar',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: onSurfaceColor.withOpacity(0.7),
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                      Text(
-                        viewmodel.canSeeValue
-                            ? NumberFormat.currency(
-                              locale: 'pt_BR',
-                              symbol: 'R\$',
-                              decimalDigits: 2,
-                            ).format(movimentacao.valor)
-                            : 'R\$ ***',
-                        style: TextStyle(
-                          color: valueColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          fontFamily: 'Poppins',
                         ),
                       ),
-                    ],
+                    );
+                  },
+                );
+              },
+              padding: EdgeInsets.zero,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: secondaryColor,
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(15),
+                    bottomRight: Radius.circular(15),
                   ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.more_horiz,
+                      color: onSecondaryColor,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      'Mais',
+                      style: TextStyle(
+                        color: onSecondaryColor,
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ),
+          ],
+        ),
+        child: Material(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+          elevation: brightness == Brightness.light ? 2 : 0,
+          shadowColor: Colors.black.withOpacity(0.07),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              _showDetalhesTransacaoModal(context, movimentacao);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: iconBg,
+                        child: Icon(
+                          CategoryIconService.getIconData(
+                            viewmodel.categoria
+                                .firstWhere(
+                                  (e) => movimentacao.idCategoria == e.id,
+                                  orElse:
+                                      () => CategoriaModel(
+                                        id: 0,
+                                        nome: 'Categoria não encontrada',
+                                        icone: 'category',
+                                      ),
+                                )
+                                .icone,
+                          ),
+                          color: helper.colorScheme.onPrimary,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            movimentacao.nome,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: helper.onSurfaceColor,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            viewmodel.categoria
+                                .firstWhere(
+                                  (e) => movimentacao.idCategoria == e.id,
+                                  orElse:
+                                      () => CategoriaModel(
+                                        id: 0,
+                                        nome: 'Categoria não encontrada',
+                                      ),
+                                )
+                                .nome,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              color: helper.onSurfaceColor.withOpacity(0.7),
+                            ),
+                          ),
+                          if (movimentacao.idCategoria == 9)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: helper.colorScheme.primary.withOpacity(
+                                  0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Sugestão de IA',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 10,
+                                  color: helper.colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(
+                    viewmodel.canSeeValue
+                        ? NumberFormat.currency(
+                          locale: 'pt_BR',
+                          symbol: 'R\$',
+                          decimalDigits: 2,
+                        ).format(movimentacao.valor)
+                        : 'R\$ ***',
+                    style: TextStyle(
+                      color: valueColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

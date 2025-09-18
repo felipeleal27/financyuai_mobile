@@ -3,6 +3,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/settings/module/settings_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_nome_rotas.dart';
 
 /// Widget de barra de navegação inferior customizada.
 /// 
@@ -32,8 +33,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
         Modular.to.navigate(HomeNomeRotas.navigate);
         break;
       case 1:
-        // Navegar para gráficos/estatísticas
-        // Modular.to.navigate(GraficosNomeRotas.navigate);
+        Modular.to.navigate(EstatisticasNomeRotas.navigate);
         break;
       case 3:
         // Navegar para carteira/conta
