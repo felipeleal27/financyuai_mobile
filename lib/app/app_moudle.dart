@@ -13,6 +13,10 @@ import 'package:neo_financyuai/app/views/settings/module/settings_module.dart';
 import 'package:neo_financyuai/app/views/settings/module/settings_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/splash_screen/module/splash_screen_module.dart';
 import 'package:neo_financyuai/app/views/splash_screen/module/splash_screen_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_module.dart';
+import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_module.dart';
+import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_nome_rotas.dart';
 
 /// Módulo principal da aplicação.
 /// 
@@ -31,7 +35,9 @@ class AppModule extends Module {
     r.module(LoginNomeRotas.modulo, module: LoginModule(), guards: [LoginGuard()]);
     r.module(RegistrarNomeRotas.modulo, module: RegistrarModule(), guards: [LoginGuard()]);
     r.module(HomeNomeRotas.modulo, module: HomeModule(), guards: [AuthGuard()]);
+    r.module(EstatisticasNomeRotas.modulo, module: EstatisticasModule(), guards: [AuthGuard()]);
     r.module(SettingsNomeRotas.modulo, module: SettingsModule(), guards: [AuthGuard()]);
     r.module(CategoriasNomeRotas.modulo, module: CategoriasModule(), guards: [AuthGuard()]);
+    r.module(NovaTransacaoNomeRotas.modulo, module: NovaTransacaoModule(), guards: [AuthGuard()]);
   }
 }

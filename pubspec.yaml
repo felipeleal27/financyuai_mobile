@@ -46,6 +46,7 @@ dependencies:
   flutter_svg: ^2.0.9
   http: ^1.2.2
   crypto: ^3.0.5
+  flutter_markdown: ^0.7.2+1
 
 dev_dependencies:
   flutter_test:

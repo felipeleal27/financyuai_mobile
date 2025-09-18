@@ -12,6 +12,10 @@ import 'package:neo_financyuai/firebase_options.dart';
 import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
 import 'package:neo_financyuai/app/service/notification_service.dart';
 import 'package:neo_financyuai/app/service/background_task_service.dart';
+import 'package:neo_financyuai/app/service/ai_routine_service.dart';
+import 'package:neo_financyuai/app/service/ai_holiday_service.dart';
+import 'package:neo_financyuai/app/service/foreground_daily_scheduler.dart';
+import 'package:neo_financyuai/app/service/ai_balance_forecast_service.dart';
 
 /// Função principal da aplicação.
 /// 
@@ -63,11 +67,43 @@ Future<void> _initializeServices() async {
     debugPrint('⚠️ Erro ao inicializar Notification Service: $e');
   }
   
+  // Roda uma análise leve da IA (sem background), após inicializar notificações
+  try {
+    await AiRoutineService().runDailyAnalysis();
+    debugPrint('✅ AI Routine Service analisou rotinas');
+  } catch (e) {
+    debugPrint('⚠️ Erro ao rodar AI Routine Service: $e');
+  }
+
+  // Análise de datas comemorativas (também leve)
+  try {
+    await AiHolidayService().runDailyAnalysis();
+    debugPrint('✅ AI Holiday Service analisou datas comemorativas');
+  } catch (e) {
+    debugPrint('⚠️ Erro ao rodar AI Holiday Service: $e');
+  }
+
+  // Previsão de saldo do mês (execução única no startup)
+  try {
+    await AiBalanceForecastService().runDailyForecast();
+    debugPrint('✅ AI Balance Forecast analisou saldo previsto');
+  } catch (e) {
+    debugPrint('⚠️ Erro ao rodar AI Balance Forecast: $e');
+  }
+  
   try {
     await BackgroundTaskService.initialize();
     debugPrint('✅ Background Task Service inicializado');
   } catch (e) {
     debugPrint('⚠️ Erro ao inicializar Background Task Service: $e');
+  }
+
+  // Agenda também em foreground (app aberto) às ~09:00
+  try {
+    ForegroundDailyScheduler().start(hour: 9, minute: 0);
+    debugPrint('✅ ForegroundDailyScheduler iniciado para 09:00');
+  } catch (e) {
+    debugPrint('⚠️ Erro ao iniciar ForegroundDailyScheduler: $e');
   }
   
   debugPrint('🚀 Todos os serviços processados (com possíveis limitações)');

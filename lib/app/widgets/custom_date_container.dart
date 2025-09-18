@@ -18,6 +18,9 @@ class CustomDateContainer extends StatelessWidget {
   /// Callback executado quando o campo é tocado.
   final VoidCallback onTap;
 
+  /// Cor de fundo opcional para harmonizar com outros campos (ex.: branco).
+  final Color? backgroundColor;
+
   /// Cria uma nova instância de [CustomDateContainer].
   /// 
   /// [labelText] é obrigatório para o rótulo do campo.
@@ -28,12 +31,20 @@ class CustomDateContainer extends StatelessWidget {
     required this.labelText,
     required this.dataSelecionada,
     required this.onTap,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final helper = AppThemeHelper.of(context);
     
+    // Define a cor de fundo efetiva (usa a override se fornecida)
+    final Color effectiveBg = backgroundColor ?? (
+      helper.isDark 
+          ? helper.colorScheme.surface.withOpacity(0.8)
+          : helper.colorScheme.surface
+    );
+
     return _buildLabelOverBorder(
       labelText,
       helper,
@@ -42,9 +53,7 @@ class CustomDateContainer extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
           decoration: BoxDecoration(
-            color: helper.isDark 
-                ? helper.colorScheme.surface.withOpacity(0.8)
-                : helper.colorScheme.surface,
+            color: effectiveBg,
             borderRadius: BorderRadius.circular(12.0),
             border: Border.all(
               color: helper.colorScheme.outline.withOpacity(0.5),
@@ -96,9 +105,12 @@ class CustomDateContainer extends StatelessWidget {
           top: -8,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            color: helper.isDark 
-                ? helper.colorScheme.surface.withOpacity(0.8)
-                : helper.colorScheme.surface,
+            // Mantém a mesma cor de fundo do campo abaixo para efeito de "label flutuante"
+            color: backgroundColor ?? (
+              helper.isDark 
+                  ? helper.colorScheme.surface.withOpacity(0.8)
+                  : helper.colorScheme.surface
+            ),
             child: Text(
               labelText,
               style: TextStyle(

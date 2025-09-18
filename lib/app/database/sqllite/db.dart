@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 class DB {
   DB._();
 
-static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuario na categoria
+static const int _dbaseVersion = 7; // v7: adiciona chat_session e chat_message
   static const String _dbaseName = 'financy.db';
 
   static final DB instance = DB._();
@@ -58,6 +58,9 @@ static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuar
     await db.execute(_tabelaCategoria);
     await db.execute(_tabelaMovimentacao);
     await db.execute(_tabelaUsuarioGoogle);
+  await db.execute(_tabelaChatSession);
+  await db.execute(_tabelaChatMessage);
+  await db.execute(_idxChatMessageSessionTs);
   }
 
   /// Callback para upgrade do banco
@@ -80,6 +83,13 @@ static const int _dbaseVersion = 6; // Incrementado para adicionar campo idUsuar
     if (oldVersion < 6) {
       // Versão 6: Adiciona campo idUsuario para suportar categorias por usuário
       await addColumnIfNotExists(db, "categoria", "IdUsuario", "TEXT");
+    }
+
+    if (oldVersion < 7) {
+      // Versão 7: Adiciona tabelas de chat
+      await db.execute(_tabelaChatSession);
+      await db.execute(_tabelaChatMessage);
+      await db.execute(_idxChatMessageSessionTs);
     }
 
     //await addColumnIfNotExists(db, "resumo", "conjunto", "INTEGER");
@@ -167,4 +177,29 @@ static const String _tabelaCategoria = '''
       DataAtualizacao INTEGER NOT NULL,
       IsAtivo INTEGER NOT NULL DEFAULT 1
   )''';
+
+  /// Tabela de sessões de chat do assistente
+  static const String _tabelaChatSession = '''
+    CREATE TABLE IF NOT EXISTS chat_session (
+      Id TEXT PRIMARY KEY,
+      UserId TEXT NOT NULL,
+      CreatedAt INTEGER NOT NULL,
+      UpdatedAt INTEGER NOT NULL,
+      Title TEXT
+  )''';
+
+  /// Tabela de mensagens de chat
+  static const String _tabelaChatMessage = '''
+    CREATE TABLE IF NOT EXISTS chat_message (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      SessionId TEXT NOT NULL,
+      IsUser INTEGER NOT NULL,
+      Content TEXT NOT NULL,
+      Timestamp INTEGER NOT NULL
+  )''';
+
+  static const String _idxChatMessageSessionTs = '''
+    CREATE INDEX IF NOT EXISTS idx_chat_message_session_ts
+      ON chat_message (SessionId, Timestamp)
+  ''';
 }

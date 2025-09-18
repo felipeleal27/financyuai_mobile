@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
 import 'package:neo_financyuai/app/viewmodel/home/home_viewmodel.dart';
+import 'package:neo_financyuai/app/widgets/cached_user_avatar_sqlite.dart';
 
 class AppBarContainer extends StatefulWidget {
   final AppThemeHelper helper;
@@ -107,7 +108,14 @@ class _AppBarContainerState extends State<AppBarContainer> {
       'Novembro',
       'Dezembro',
     ];
-    return meses[data.month - 1];
+    final nomeMes = meses[data.month - 1];
+    final anoAtual = DateTime.now().year;
+    if (data.year == anoAtual) {
+      return nomeMes;
+    } else {
+      final anoAbreviado = data.year.toString().substring(2);
+      return '$nomeMes/$anoAbreviado';
+    }
   }
 
   String _obterTextoSaldo(DateTime mesAtual) {
@@ -127,7 +135,6 @@ class _AppBarContainerState extends State<AppBarContainer> {
   @override
   Widget build(BuildContext context) {
     final userName = _authService.userName ?? 'Usuário';
-    final userPhotoUrl = _authService.userPhotoUrl;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -153,19 +160,9 @@ class _AppBarContainerState extends State<AppBarContainer> {
                     ),
                   ],
                 ),
-                child: CircleAvatar(
+                child: const CachedUserAvatar(
                   radius: 24,
-                  backgroundColor: Colors.white,
-                  backgroundImage:
-                      userPhotoUrl != null ? NetworkImage(userPhotoUrl) : null,
-                  child:
-                      userPhotoUrl == null
-                          ? Icon(
-                            Icons.person,
-                            color: widget.helper.homeContainerColor,
-                            size: 28,
-                          )
-                          : null,
+                  fallbackIcon: Icons.person,
                 ),
               ),
               const SizedBox(width: 12),

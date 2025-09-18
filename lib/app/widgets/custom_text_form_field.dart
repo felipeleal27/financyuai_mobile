@@ -17,6 +17,7 @@ class CustomTextFormField extends StatefulWidget {
   final Widget? suffixIcon;
   final bool isCurrency;
   final TextCapitalization textCapitalization; // Adicionando este parâmetro
+  final Color? backgroundColor; // Permite sobrescrever a cor de fundo
 
   const CustomTextFormField({
     super.key,
@@ -33,6 +34,7 @@ class CustomTextFormField extends StatefulWidget {
     this.suffixIcon,
     this.isCurrency = false,
     this.textCapitalization = TextCapitalization.none, // Valor padrão
+    this.backgroundColor, // Opcional
   });
 
   @override
@@ -106,9 +108,11 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
     final helper = AppThemeHelper.of(context);
     
     return TextFormField(
-      onChanged: (value) {
-        widget.onChanged?.call(value.toString().trim());
-      },
+      onChanged: widget.isCurrency
+          ? null // para moeda, o listener interno (_formatCurrency) já chama onChanged com valor numérico
+          : (value) {
+              widget.onChanged?.call(value.toString().trim());
+            },
       controller: _internalController,
       keyboardType: widget.isCurrency ? TextInputType.number : widget.keyboardType,
       inputFormatters:
@@ -130,10 +134,13 @@ class _CustomTextFormFieldState extends State<CustomTextFormField> {
           fontStyle: FontStyle.italic,
           color: helper.colorScheme.onSurface.withOpacity(0.5),
         ),
-        filled: true,
-        fillColor: helper.isDark 
-            ? helper.colorScheme.surface.withOpacity(0.8)
-            : helper.colorScheme.surface,
+    filled: true,
+    // Se backgroundColor for fornecida, usa ela; senão aplica o padrão por tema
+    fillColor: widget.backgroundColor ?? (
+      helper.isDark 
+        ? helper.colorScheme.surface.withOpacity(0.8)
+        : helper.colorScheme.surface
+    ),
         contentPadding:
             const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
         border: OutlineInputBorder(

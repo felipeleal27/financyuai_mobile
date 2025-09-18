@@ -211,6 +211,30 @@ mixin _$HomeViewmodel on HomeViewmodelBase, Store {
     });
   }
 
+  late final _$removerTransacoesRelacionadasAsyncAction = AsyncAction(
+    'HomeViewmodelBase.removerTransacoesRelacionadas',
+    context: context,
+  );
+
+  @override
+  Future<void> removerTransacoesRelacionadas(MovimentacaoModel movimentacao) {
+    return _$removerTransacoesRelacionadasAsyncAction.run(
+      () => super.removerTransacoesRelacionadas(movimentacao),
+    );
+  }
+
+  late final _$removerTransacoesDestaPraFrenteAsyncAction = AsyncAction(
+    'HomeViewmodelBase.removerTransacoesDestaPraFrente',
+    context: context,
+  );
+
+  @override
+  Future<void> removerTransacoesDestaPraFrente(MovimentacaoModel movimentacao) {
+    return _$removerTransacoesDestaPraFrenteAsyncAction.run(
+      () => super.removerTransacoesDestaPraFrente(movimentacao),
+    );
+  }
+
   late final _$initializeServicesAsyncAction = AsyncAction(
     'HomeViewmodelBase.initializeServices',
     context: context,
@@ -243,6 +267,16 @@ mixin _$HomeViewmodel on HomeViewmodelBase, Store {
     return _$removerMovimentacaoAsyncAction.run(
       () => super.removerMovimentacao(movimentacao),
     );
+  }
+
+  late final _$onLogoutAsyncAction = AsyncAction(
+    'HomeViewmodelBase.onLogout',
+    context: context,
+  );
+
+  @override
+  Future<void> onLogout() {
+    return _$onLogoutAsyncAction.run(() => super.onLogout());
   }
 
   late final _$HomeViewmodelBaseActionController = ActionController(

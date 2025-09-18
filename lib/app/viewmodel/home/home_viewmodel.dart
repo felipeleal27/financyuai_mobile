@@ -1,16 +1,20 @@
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:mobx/mobx.dart';
-import 'package:neo_financyuai/app/service/saldo_service.dart';
-import 'package:uuid/uuid.dart';
-import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
-import 'package:neo_financyuai/app/data/model/categoria_model.dart';
-import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';
-import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
-import 'package:neo_financyuai/app/service/notification_service.dart';
-import 'package:neo_financyuai/app/service/auth_service.dart';
 
-part 'home_viewmodel.g.dart';
+
+
+  import 'dart:async';
+  import 'package:flutter/foundation.dart';
+  import 'package:mobx/mobx.dart';
+  import 'package:neo_financyuai/app/service/saldo_service.dart';
+  import 'package:uuid/uuid.dart';
+  import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
+  import 'package:neo_financyuai/app/data/model/categoria_model.dart';
+  import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';
+  import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
+  import 'package:neo_financyuai/app/service/notification_service.dart';
+  import 'package:neo_financyuai/app/service/auth_service.dart';
+
+  part 'home_viewmodel.g.dart';
+
 
 /// ViewModel principal responsável pela lógica da tela inicial
 ///
@@ -24,6 +28,66 @@ class HomeViewmodel = HomeViewmodelBase with _$HomeViewmodel;
 
 /// Classe base do ViewModel principal
 abstract class HomeViewmodelBase with Store {
+  /// Remove todas as transações relacionadas (parcelas ou fixas)
+  @action
+  Future<void> removerTransacoesRelacionadas(MovimentacaoModel movimentacao) async {
+    try {
+      final id = movimentacao.id ?? '';
+      String? prefixo;
+      if (id.contains('_parcela_')) {
+        prefixo = '${id.split('_parcela_').first}_parcela_';
+      } else if (id.contains('_fixa_')) {
+        prefixo = '${id.split('_fixa_').first}_fixa_';
+      }
+      if (prefixo == null) return;
+      // Busca todas as movimentações do usuário
+      final todas = await _homeRepository.getMovimentacoesTodas();
+  final relacionadas = todas.where((m) => (m.id ?? '').startsWith(prefixo!)).toList();
+      for (final m in relacionadas) {
+        await _homeRepository.removerMovimentacao(m);
+        _movimentacoes.removeWhere((x) => x.id == m.id);
+      }
+      // Atualiza saldo imediatamente após remoção
+      await carregarSaldo(_mesAtual);
+    } catch (e) {
+      if (kDebugMode) debugPrint('Erro ao remover relacionadas: $e');
+    }
+  }
+
+  /// Remove esta e todas as seguintes (por data ou número de parcela)
+  @action
+  Future<void> removerTransacoesDestaPraFrente(MovimentacaoModel movimentacao) async {
+    try {
+      final id = movimentacao.id ?? '';
+      String? prefixo;
+      int? numeroAtual;
+      if (id.contains('_parcela_')) {
+        prefixo = '${id.split('_parcela_').first}_parcela_';
+        numeroAtual = int.tryParse(id.split('_parcela_').last);
+      } else if (id.contains('_fixa_')) {
+        prefixo = '${id.split('_fixa_').first}_fixa_';
+        numeroAtual = int.tryParse(id.split('_fixa_').last);
+      }
+      if (prefixo == null || numeroAtual == null) return;
+      final numeroAtualSeguro = numeroAtual;
+      // Busca todas as movimentações do usuário
+      final todas = await _homeRepository.getMovimentacoesTodas();
+      final relacionadas = todas.where((m) {
+        final mid = m.id ?? '';
+        if (!mid.startsWith(prefixo!)) return false;
+  final n = int.tryParse(mid.replaceFirst(prefixo, ''));
+        return n != null && n >= numeroAtualSeguro;
+      }).toList();
+      for (final m in relacionadas) {
+        await _homeRepository.removerMovimentacao(m);
+        _movimentacoes.removeWhere((x) => x.id == m.id);
+      }
+      // Atualiza saldo imediatamente após remoção
+      await carregarSaldo(_mesAtual);
+    } catch (e) {
+      if (kDebugMode) debugPrint('Erro ao remover desta pra frente: $e');
+    }
+  }
   final HomeRepository _homeRepository;
   final FirebaseSyncService _syncService;
   final NotificationService _notificationService;
@@ -45,15 +109,11 @@ abstract class HomeViewmodelBase with Store {
   /// Inicializa os serviços em segundo plano
   @action
   Future<void> initializeServices() async {
-    await _syncService.initialize();
+  await _syncService.initialize();
     await _notificationService.initialize();
     await carregarCategorias();
 
-    // 🆕 Sincronização inteligente pós-login
-    final userId = _authService.userId;
-    if (userId != null) {
-      await _syncService.syncOnLogin(userId);
-    }
+    // Sincronização desativada: nenhuma ação pós-login
 
     await carregarMovimentacoes(); 
     await carregarSaldo(_mesAtual);
@@ -192,11 +252,7 @@ abstract class HomeViewmodelBase with Store {
   void adicionarMovimentacao(MovimentacaoModel movimentacao) {
     _movimentacoes.add(movimentacao);
 
-    // Sincroniza com Firebase (funciona offline) - usa o userId real
-    final userId = _authService.userId;
-    if (userId != null) {
-      _syncService.addMovimentacao(movimentacao, userId);
-    }
+    // Persistência local já é feita no repository; sync remoto desativado
 
     // Notificações inteligentes
     _checkForNotifications(movimentacao);
@@ -242,7 +298,7 @@ abstract class HomeViewmodelBase with Store {
 
   /// Força sincronização manual
   Future<void> sincronizarManual() async {
-    await _syncService.forcSync();
+    // Desativado
   }
 
   /// Verifica status da conexão
@@ -304,14 +360,16 @@ abstract class HomeViewmodelBase with Store {
 
       if (sucesso) {
         // 2. 🔄 Recarrega a lista do SQLite para garantir consistência
-        // Isso evita duplicação e garante que mostra os dados corretos imediatamente
         await carregarMovimentacoes();
 
         // 3. Notificações inteligentes
         _checkForNotifications(movimentacao);
 
+        // 4. Sincroniza com Firebase automaticamente
+        await sincronizarMovimentacoes();
+
         if (kDebugMode) {
-          debugPrint('✅ Transação salva e lista recarregada do SQLite');
+          debugPrint('✅ Transação salva, lista recarregada e sincronizada com Firebase');
         }
       }
 
@@ -356,7 +414,14 @@ abstract class HomeViewmodelBase with Store {
   Future<void> sincronizarTodosDados() async {
     await sincronizarMovimentacoes();
     await sincronizarCategorias();
-    await _syncService.forcSync(); // Força sincronização da fila pendente
+    // Força sincronização da fila pendente (somente se autenticado)
+    if (currentUserId != null) {
+      await _syncService.forcSync(currentUserId!);
+    } else {
+      if (kDebugMode) {
+        debugPrint('⚠️ Não autenticado, ignorando forcSync');
+      }
+    }
   }
 
   /// Método de teste para Firebase (apenas debug)
@@ -412,12 +477,23 @@ abstract class HomeViewmodelBase with Store {
       return null;
     }
 
-    // Verifica se categoria foi selecionada
+    // Se categoria não foi selecionada, tenta sugerir automaticamente (IA leve)
+    int? categoriaIdSugestao;
     if (_categoriaSelecionada == null) {
-      if (kDebugMode) {
-        debugPrint('⚠️  Categoria não selecionada');
+      try {
+        // Import tardio para evitar dependência circular
+        // ignore: avoid_dynamic_calls
+        // A classe está em app/ai/classifier.dart
+        // Usamos uma função local para evitar problemas de import no código gerado
+        categoriaIdSugestao = _classifyCategoriaId(_nomeMovimentacao, _valor);
+        if (kDebugMode) {
+          debugPrint('🤖 Categoria sugerida automaticamente: $categoriaIdSugestao');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('❌ Falha ao sugerir categoria automaticamente: $e');
+        }
       }
-      return null;
     }
 
     const uuid = Uuid();
@@ -436,12 +512,24 @@ abstract class HomeViewmodelBase with Store {
       id: uuid.v4(), // Gera UUID único
       nome: _nomeMovimentacao,
       valor: _valor,
-      idCategoria: _categoriaSelecionada!.id,
+  idCategoria: (_categoriaSelecionada?.id) ?? (categoriaIdSugestao ?? 9),
       isSaida: _isSaida,
       dataMovimentacao: dataComHorario, // Data selecionada + horário atual
       descricao: '',
       idUsuario: currentUserId!, // Usa o UID do Firebase Auth
     );
+  }
+
+  /// Heurística mínima para sugerir categoria quando usuário não escolhe.
+  /// 1=Alimentação, 2=Transporte, 8=Salário, 9=Outros
+  int _classifyCategoriaId(String nome, double valor) {
+    final text = (nome).toLowerCase();
+    bool hasAny(Iterable<String> words) => words.any((w) => text.contains(w));
+
+    if (hasAny(['ifood', 'restaurante', 'pizza', 'lanche', 'mercado', 'supermercado'])) return 1;
+    if (hasAny(['uber', '99', 'cabify', 'metro', 'onibus', 'combustivel', 'gasolina', 'posto'])) return 2;
+    if (valor > 0 && hasAny(['salario', 'receita', 'bonus', 'provento'])) return 8;
+    return 9;
   }
 
   /// 🆕 Carrega as movimentações do banco de dados
@@ -489,13 +577,7 @@ abstract class HomeViewmodelBase with Store {
           }
         }
 
-        // 4. Configura novo stream do Firebase para atualizações em tempo real
-        _configurarStreamFirebase(userId);
-
-        // 5. Força sincronização se estiver online
-        if (await isOnline()) {
-          await _syncService.syncTransacoesToFirebase(userId);
-        }
+        // Streams e sincronizações remotas desativadas
       } else {
         if (kDebugMode) {
           print(
@@ -514,71 +596,12 @@ abstract class HomeViewmodelBase with Store {
   /// Configura stream do Firebase para updates em tempo real
   StreamSubscription<List<MovimentacaoModel>>? _streamSubscription;
 
-  void _configurarStreamFirebase(String userId) {
-    if (kDebugMode) {
-      print('🔄 Configurando stream Firebase para userId: $userId');
-    }
-
-    // Cancela stream anterior se existir
-    _streamSubscription?.cancel();
-
-    _streamSubscription = _syncService
-        .getTransacoesStream(userId)
-        .listen(
-          (movimentacoesFirebase) {
-            if (kDebugMode) {
-              print(
-                '🔄 ${movimentacoesFirebase.length} movimentações recebidas do Firebase',
-              );
-              for (var mov in movimentacoesFirebase) {
-                print('   Firebase - ${mov.nome}: R\$ ${mov.valor}');
-              }
-            }
-
-            // ✅ Filtra as movimentações pelo mês/ano selecionado
-            final movimentacoesFiltradas =
-                movimentacoesFirebase.where((mov) {
-                  return mov.dataMovimentacao.year == _dataSelecionada.year &&
-                      mov.dataMovimentacao.month == _dataSelecionada.month;
-                }).toList();
-
-            if (kDebugMode) {
-              print(
-                '🔄 ${movimentacoesFiltradas.length} movimentações filtradas para ${_dataSelecionada.month}/${_dataSelecionada.year}',
-              );
-            }
-
-            // ✅ Só atualiza se recebeu dados do Firebase (online)
-            // e se há diferença no número de itens ou conteúdo
-            if (movimentacoesFiltradas.isNotEmpty) {
-              if (kDebugMode) {
-                print(
-                  '🔄 Atualizando lista com dados do Firebase (${movimentacoesFiltradas.length} itens)',
-                );
-              }
-              setMovimentacoes(movimentacoesFiltradas);
-            } else if (movimentacoesFiltradas.isEmpty) {
-              // Se Firebase está vazio para este mês, verifica se deve limpar ou manter dados locais
-              if (kDebugMode) {
-                print(
-                  '📱 Firebase vazio para este mês - mantendo dados locais se existirem',
-                );
-              }
-              // Não limpa automaticamente, deixa o SQLite como fonte principal
-            }
-          },
-          onError: (error) {
-            if (kDebugMode) {
-              print('❌ Erro no stream Firebase: $error');
-            }
-          },
-        );
-  }
+  // Removido: stream remota desativada
 
   /// Limpa o stream anterior quando o mês muda
   void _limparStream() {
-    _streamSubscription?.cancel();
-    _streamSubscription = null;
+  _streamSubscription?.cancel();
+  _streamSubscription = null;
   }
 
   /// Limpa recursos e estado ao fazer logout
