@@ -505,7 +505,7 @@ abstract class NovaTransacaoViewmodelBase with Store {
         transacoes.add(transacao);
         
         if (kDebugMode && i < 3) {
-          print('DEBUG: Transação ${i + 1} criada: ${transacao.nome} - ${transacao.dataMovimentacao}');
+          debugPrint('DEBUG: Transação ${i + 1} criada: ${transacao.nome} - ${transacao.dataMovimentacao}');
         }
       }
       

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:neo_financyuai/app/data/model/categoria_model.dart';
@@ -245,8 +246,9 @@ class _CategoriasPageState extends State<CategoriasPage> {
                     final sucesso = await viewmodel.adicionarCategoria(nome, iconeSelecionado);
                     if (sucesso && context.mounted) {
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Categoria adicionada com sucesso!')),
+                      ToastificationUtils.success(
+                        title: 'Categoria adicionada com sucesso!',
+                        context: context,
                       );
                     }
                   }
@@ -344,8 +346,9 @@ class _CategoriasPageState extends State<CategoriasPage> {
                     final sucesso = await viewmodel.atualizarCategoria(categoriaAtualizada);
                     if (sucesso && context.mounted) {
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Categoria atualizada com sucesso!')),
+                      ToastificationUtils.success(
+                        title: 'Categoria atualizada com sucesso!',
+                        context: context,
                       );
                     }
                   }
@@ -395,15 +398,14 @@ class _CategoriasPageState extends State<CategoriasPage> {
               if (context.mounted) {
                 Navigator.of(context).pop();
                 if (sucesso) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Categoria removida com sucesso!')),
+                  ToastificationUtils.success(
+                    title: 'Categoria removida com sucesso!',
+                    context: context,
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(viewmodel.errorMessage ?? 'Erro ao remover categoria'),
-                      backgroundColor: helper.colorScheme.error,
-                    ),
+                  ToastificationUtils.error(
+                    title: viewmodel.errorMessage ?? 'Erro ao remover categoria',
+                    context: context,
                   );
                 }
               }

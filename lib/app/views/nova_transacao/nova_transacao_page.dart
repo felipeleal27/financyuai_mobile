@@ -9,6 +9,7 @@ import 'package:neo_financyuai/app/viewmodel/nova_transacao/nova_transacao_viewm
 import 'package:neo_financyuai/app/widgets/custom_date_container.dart';
 import 'package:neo_financyuai/app/widgets/custom_dialog_drop_down.dart';
 import 'package:neo_financyuai/app/widgets/custom_text_form_field.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 /// Página responsável pela criação de nova transação
 /// 
@@ -109,7 +110,6 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
       final id = movimentacao.id ?? '';
       if (id.contains('_parcela_') || id.contains('_fixa_')) {
         viewmodel.setIsRecorrente(true);
-        // Em edição, manter fechado e não permitir abrir
         _recorrenciaExpanded = false;
         
         if (id.contains('_parcela_')) {
@@ -990,10 +990,10 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
 
     if (!viewmodel.isFormValid) {
       print('DEBUG: Formulário inválido - dados insuficientes');
-      _showSnackBar(
-        'Erro: Usuário não autenticado ou dados inválidos',
-        Colors.red,
-        Icons.error_outline,
+      ToastificationUtils.error(
+        title: 'Erro',
+        message: 'Usuário não autenticado ou dados inválidos',
+        context: context,
       );
       return;
     }
@@ -1004,7 +1004,10 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
       final original = viewmodel.movimentacaoOriginal!;
       final atualizado = viewmodel.buildUpdatedMovimentacao(original.id!);
       if (atualizado == null) {
-        _showSnackBar('Erro ao preparar atualização', Colors.red, Icons.error_outline);
+        ToastificationUtils.error(
+          title: 'Erro ao preparar atualização',
+          context: context,
+        );
         return;
       }
 
@@ -1023,10 +1026,9 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
       final movimentacao = viewmodel.createMovimentacaoFromForm();
       if (movimentacao == null) {
         print('DEBUG: Erro ao criar movimentação');
-        _showSnackBar(
-          'Erro ao criar transação',
-          Colors.red,
-          Icons.error_outline,
+        ToastificationUtils.error(
+          title: 'Erro ao criar transação',
+          context: context,
         );
         return;
       }
@@ -1034,7 +1036,7 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
       sucesso = await viewmodel.gravarMovimentacao(movimentacao);
     }
     
-    if (sucesso) {
+  if (sucesso) {
       // Limpa o formulário
       viewmodel.limparFormulario();
       nomeController.clear();
@@ -1042,27 +1044,27 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
       descricaoController.clear();
       
       // Mostra sucesso e volta para a tela anterior
+      if (!mounted) return;
       if (_isEdicao) {
-        _showSnackBar(
-          '${widget.isDespesa ? 'Despesa' : 'Receita'} atualizada com sucesso!',
-          Colors.green,
-          Icons.check_circle_outline,
+        ToastificationUtils.success(
+          title: '${widget.isDespesa ? 'Despesa' : 'Receita'} atualizada com sucesso!',
+          context: context,
         );
       } else {
-        _showSnackBar(
-          '${widget.isDespesa ? 'Despesa' : 'Receita'} salva com sucesso!',
-          Colors.green,
-          Icons.check_circle_outline,
+        ToastificationUtils.success(
+          title: '${widget.isDespesa ? 'Despesa' : 'Receita'} salva com sucesso!',
+          context: context,
         );
       }
 
-      Modular.to.pop();
+  if (!mounted) return;
+  Modular.to.pop();
       
     } else {
-      _showSnackBar(
-        'Erro ao salvar transação',
-        Colors.red,
-        Icons.error_outline,
+      if (!mounted) return;
+      ToastificationUtils.error(
+        title: 'Erro ao salvar transação',
+        context: context,
       );
     }
   }
@@ -1263,31 +1265,5 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
     );
   }
 
-  void _showSnackBar(String message, Color backgroundColor, IconData icon) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
+  // Removido: substituído por ToastificationUtils
 }

@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -792,11 +793,9 @@ class _WidgetFormLoginState extends State<WidgetFormLogin>
                     
                     if (success && mounted) {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Conta criada com sucesso!'),
-                          backgroundColor: Colors.green,
-                        ),
+                      ToastificationUtils.success(
+                        title: 'Conta criada com sucesso!',
+                        context: context,
                       );
                     }
                   } catch (e) {

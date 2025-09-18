@@ -17,6 +17,7 @@ import 'package:neo_financyuai/app/widgets/chat_ia_dialog.dart';
 import 'package:neo_financyuai/app/service/category_icon_service.dart';
 import 'package:neo_financyuai/app/service/notification_service.dart';
 import 'package:neo_financyuai/app/service/ai_debug_service.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -251,8 +252,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         color: helper.colorScheme.secondary,
                                         onTap: () {
                                           Navigator.of(ctx).pop();
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Funcionalidade de duplicar em breve!')),
+                                          ToastificationUtils.info(
+                                            title: 'Funcionalidade de duplicar em breve!',
+                                            context: context,
                                           );
                                         },
                                       ),
@@ -266,8 +268,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         color: Colors.blue,
                                         onTap: () {
                                           Navigator.of(ctx).pop();
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Funcionalidade de compartilhar em breve!')),
+                                          ToastificationUtils.info(
+                                            title: 'Funcionalidade de compartilhar em breve!',
+                                            context: context,
                                           );
                                         },
                                       ),
@@ -628,6 +631,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       },
     ).then((result) async {
       if (result != null) {
+        if (!context.mounted) return;
         // Mostra confirmação antes de executar a ação
         _showConfirmDeleteDialog(context, movimentacao, result);
       }
@@ -767,17 +771,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 
                 // Mostra confirmação
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        tipoRemocao == 'todas_relacionadas' 
-                          ? 'Todas as ocorrências foram excluídas'
-                          : tipoRemocao == 'desta_pra_frente'
-                            ? 'Transações a partir desta data foram excluídas'
-                            : 'Transação excluída com sucesso',
-                      ),
-                      backgroundColor: helper.colorScheme.primary,
-                    ),
+                  final msg = tipoRemocao == 'todas_relacionadas'
+                      ? 'Todas as ocorrências foram excluídas'
+                      : tipoRemocao == 'desta_pra_frente'
+                          ? 'Transações a partir desta data foram excluídas'
+                          : 'Transação excluída com sucesso';
+                  ToastificationUtils.success(
+                    title: msg,
+                    context: context,
                   );
                 }
               },
@@ -1406,13 +1407,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             ElevatedButton.icon(
                               onPressed: () async {
                                 await AiDebugService().runAllNow();
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'IA executada agora (rotinas, feriados, previsão)',
-                                    ),
-                                  ),
+                                if (!context.mounted) return;
+                                ToastificationUtils.info(
+                                  title: 'IA executada agora (rotinas, feriados, previsão)',
+                                  context: context,
                                 );
                               },
                               icon: const Icon(Icons.play_circle_outline),
@@ -1431,13 +1429,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               onPressed: () async {
                                 final removed =
                                     await AiDebugService().resetIaFlags();
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Flags de IA limpas: $removed',
-                                    ),
-                                  ),
+                                if (!context.mounted) return;
+                                ToastificationUtils.info(
+                                  title: 'Flags de IA limpas: $removed',
+                                  context: context,
                                 );
                               },
                               icon: const Icon(
@@ -1743,8 +1738,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 onSurfaceColor: onSurfaceColor,
                                 onTap: () {
                                   Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Funcionalidade de duplicar em breve!')),
+                                  ToastificationUtils.info(
+                                    title: 'Funcionalidade de duplicar em breve!',
+                                    context: context,
                                   );
                                 },
                               ),
@@ -1759,8 +1755,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 onSurfaceColor: onSurfaceColor,
                                 onTap: () {
                                   Navigator.of(ctx).pop();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Funcionalidade de compartilhar em breve!')),
+                                  ToastificationUtils.info(
+                                    title: 'Funcionalidade de compartilhar em breve!',
+                                    context: context,
                                   );
                                 },
                               ),
