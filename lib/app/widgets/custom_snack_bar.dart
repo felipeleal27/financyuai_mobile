@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 /// Classe utilitária para exibir SnackBars customizados.
 /// 
@@ -13,7 +14,7 @@ class CustomSnackBar {
   /// [context] é o contexto da aplicação.
   /// [message] é a mensagem a ser exibida.
   static void success(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.green, Icons.check_circle);
+    ToastificationUtils.success(title: message, context: context);
   }
 
   /// Exibe um SnackBar informativo.
@@ -21,7 +22,7 @@ class CustomSnackBar {
   /// [context] é o contexto da aplicação.
   /// [message] é a mensagem a ser exibida.
   static void info(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.blue, Icons.info);
+    ToastificationUtils.info(title: message, context: context);
   }
 
   /// Exibe um SnackBar de aviso.
@@ -29,7 +30,7 @@ class CustomSnackBar {
   /// [context] é o contexto da aplicação.
   /// [message] é a mensagem a ser exibida.
   static void warning(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.orange, Icons.warning);
+    ToastificationUtils.warning(title: message, context: context);
   }
 
   /// Exibe um SnackBar de erro.
@@ -37,7 +38,7 @@ class CustomSnackBar {
   /// [context] é o contexto da aplicação.
   /// [message] é a mensagem a ser exibida.
   static void error(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.red, Icons.error);
+    ToastificationUtils.error(title: message, context: context);
   }
 
   /// Método privado para exibir o SnackBar.
@@ -46,22 +47,5 @@ class CustomSnackBar {
   /// [message] é a mensagem a ser exibida.
   /// [color] é a cor de fundo do SnackBar.
   /// [icon] é o ícone a ser exibido.
-  static void _showSnackBar(BuildContext context, String message, Color color, IconData icon) {
-    final snackBar = SnackBar(
-      content: Row(
-        children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 10),
-          Expanded(child: Text(message)),
-        ],
-      ),
-      backgroundColor: color,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-      ),
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
+  // Mantido para compatibilidade: agora delega para ToastificationUtils.
 }

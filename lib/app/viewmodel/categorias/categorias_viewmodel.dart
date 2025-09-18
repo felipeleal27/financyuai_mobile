@@ -1,3 +1,4 @@
+// ignore_for_file: library_private_types_in_public_api
 import 'package:mobx/mobx.dart';
 import 'package:neo_financyuai/app/data/model/categoria_model.dart';
 import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';

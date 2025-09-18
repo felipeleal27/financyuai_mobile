@@ -1,3 +1,31 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+    // Avoid Java extension trying to import/build the Gradle project (Flutter handles Android build)
+    "java.configuration.updateBuildConfiguration": "disabled",
+    "java.import.gradle.enabled": false,
+    "java.import.gradle.wrapper.enabled": false,
+    "java.import.gradle.offline.enabled": false,
+    "java.project.importOnOpen": "disabled",
+    // Silence Gradle Kotlin DSL language server on Android folder
+    "java.import.exclusions": [
+        "**/android/**"
+    ],
+    // Disable VS Code Gradle extension auto-detection in this workspace
+    "gradle.autoDetect": "off",
+        "gradle.offlineMode": false,
+    // Disable Kotlin language server (kts) to prevent Gradle sync attempts
+        "kotlin.languageServer.enabled": false,
+        // Treat Gradle files as plaintext to avoid language servers kicking in
+        "files.associations": {
+            "*.gradle.kts": "plaintext",
+            "*.gradle": "plaintext",
+            "settings.gradle.kts": "plaintext",
+            "build.gradle.kts": "plaintext"
+        },
+        // Exclude Android folder from search/indexing to avoid background tooling
+        "search.exclude": {
+            "**/android/**": true
+        },
+        "files.watcherExclude": {
+            "**/android/**": true
+        }
 }

@@ -10,6 +10,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import 'package:neo_financyuai/app/widgets/cached_user_avatar_sqlite.dart';
 import 'package:neo_financyuai/app/repository/chat_repository.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 class ChatIADialog extends StatefulWidget {
   const ChatIADialog({super.key});
@@ -531,10 +532,10 @@ class _ChatBubble extends StatelessWidget {
                                       ClipboardData(text: message.text),
                                     );
                                     messenger?.clearSnackBars();
-                                    messenger?.showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Mensagem copiada'),
-                                      ),
+                                    if (!context.mounted) return;
+                                    ToastificationUtils.info(
+                                      title: 'Mensagem copiada',
+                                      context: context,
                                     );
                                   },
                                   child: Icon(

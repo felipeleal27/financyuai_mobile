@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 import 'package:neo_financyuai/app/utils/ui_config_theme.dart';
 
 /// Widget de exemplo que demonstra como usar os temas adaptativos.
@@ -77,12 +78,9 @@ class AdaptiveThemeExample extends StatelessWidget {
               onPressed: () {
                 // Exemplo de como acessar o tema atual
                 final currentTheme = UiConfigTheme.getCurrentTheme(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Tema atual: ${currentTheme.brightness == Brightness.dark ? 'Escuro' : 'Claro'}',
-                    ),
-                  ),
+                ToastificationUtils.info(
+                  title: 'Tema atual: ${currentTheme.brightness == Brightness.dark ? 'Escuro' : 'Claro'}',
+                  context: context,
                 );
               },
               child: const Text('Mostrar Tema Atual'),
