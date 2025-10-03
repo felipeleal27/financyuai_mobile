@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:neo_financyuai/app/viewmodel/settings/settings_viewmodel.dart';
 import 'package:neo_financyuai/app/database/sqllite/db.dart';
 import 'package:neo_financyuai/app/database/sqllite/sql_lite.dart';
 import 'package:neo_financyuai/app/service/notification_service.dart';
@@ -13,10 +15,16 @@ class AiHolidayService {
 
   final NotificationService _notifier = NotificationService();
   final AuthService _auth = AuthService();
+  final SettingsViewmodel _settings = Modular.get<SettingsViewmodel>();
 
   /// Executa diariamente: verifica se há feriado chegando e dispara lembrete.
   Future<void> runDailyAnalysis() async {
     try {
+      await _settings.load();
+      if (!_settings.notificationsEnabled || !_settings.aiHolidayEnabled) {
+        if (kDebugMode) print('🔕 AI Holiday notifications disabled');
+        return;
+      }
       final userId = _auth.userId;
       if (userId == null) return;
 

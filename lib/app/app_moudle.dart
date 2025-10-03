@@ -17,6 +17,11 @@ import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_module
 import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_module.dart';
 import 'package:neo_financyuai/app/views/nova_transacao/module/nova_transacao_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/orcamento/module/orcamento_module.dart';
+import 'package:neo_financyuai/app/views/orcamento/module/orcamento_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/chat_ia/module/chat_ia_module.dart';
+import 'package:neo_financyuai/app/views/chat_ia/module/chat_ia_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/tabs/tabs_shell_page.dart';
 
 /// Módulo principal da aplicação.
 /// 
@@ -39,5 +44,9 @@ class AppModule extends Module {
     r.module(SettingsNomeRotas.modulo, module: SettingsModule(), guards: [AuthGuard()]);
     r.module(CategoriasNomeRotas.modulo, module: CategoriasModule(), guards: [AuthGuard()]);
     r.module(NovaTransacaoNomeRotas.modulo, module: NovaTransacaoModule(), guards: [AuthGuard()]);
+    r.module(OrcamentoNomeRotas.modulo, module: OrcamentoModule(), guards: [AuthGuard()]);
+    r.module(ChatIANomeRotas.modulo, module: ChatIAModule(), guards: [AuthGuard()]);
+    // Shell das abas (IndexedStack) para navegação fluida
+    r.child('/app/tabs', child: (_) => const TabsShellPage(), guards: [AuthGuard()]);
   }
 }

@@ -6,6 +6,8 @@
   import 'package:mobx/mobx.dart';
   import 'package:neo_financyuai/app/service/saldo_service.dart';
   import 'package:uuid/uuid.dart';
+  import 'package:flutter_modular/flutter_modular.dart';
+  import 'package:neo_financyuai/app/viewmodel/settings/settings_viewmodel.dart';
   import 'package:neo_financyuai/app/data/model/movimentacao_model.dart';
   import 'package:neo_financyuai/app/data/model/categoria_model.dart';
   import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';
@@ -180,6 +182,128 @@ abstract class HomeViewmodelBase with Store {
   bool get isSaida => _isSaida;
   bool get shouldOpenDialog => _shouldOpenDialog;
   double get saldoAtual => _saldoAtual;
+  // Exposição dos filtros para a UI
+  String get searchQuery => _searchQuery;
+  bool? get filterIsSaida => _filterIsSaida;
+  int? get filterCategoryId => _filterCategoryId;
+  double? get minValueFilter => _minValueFilter;
+  double? get maxValueFilter => _maxValueFilter;
+  DateTime? get startDateFilter => _startDateFilter;
+  DateTime? get endDateFilter => _endDateFilter;
+  
+  @observable
+  bool _limitToCurrentMonth = true;
+  bool get limitToCurrentMonth => _limitToCurrentMonth;
+  
+  @action
+  void setLimitToCurrentMonth(bool value) => _limitToCurrentMonth = value;
+
+  // =====================
+  // Filtros da Home
+  // =====================
+  @observable
+  String _searchQuery = '';
+
+  // null = ambos, true = apenas despesas (saídas), false = apenas receitas (entradas)
+  @observable
+  bool? _filterIsSaida;
+
+  // Filtra por categoria específica (id); null = todas
+  @observable
+  int? _filterCategoryId;
+
+  // Faixa de valores; null = sem limitação
+  @observable
+  double? _minValueFilter;
+
+  @observable
+  double? _maxValueFilter;
+
+  // Período; se null, usa o período atual da tela (mês atual gerido pelo AppBar)
+  @observable
+  DateTime? _startDateFilter;
+
+  @observable
+  DateTime? _endDateFilter;
+
+  @computed
+  List<MovimentacaoModel> get filteredMovimentacoes {
+    Iterable<MovimentacaoModel> list = _movimentacoes;
+
+    // Texto (nome da transação)
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list.where((m) => (m.nome).toLowerCase().contains(q));
+    }
+
+    // Tipo (entrada / saída)
+    if (_filterIsSaida != null) {
+      list = list.where((m) => m.isSaida == _filterIsSaida);
+    }
+
+    // Categoria
+    if (_filterCategoryId != null) {
+      list = list.where((m) => m.idCategoria == _filterCategoryId);
+    }
+
+    // Valor
+    if (_minValueFilter != null) {
+      list = list.where((m) => m.valor.abs() >= _minValueFilter!);
+    }
+    if (_maxValueFilter != null) {
+      list = list.where((m) => m.valor.abs() <= _maxValueFilter!);
+    }
+
+    // Período
+    if (_startDateFilter != null) {
+      list = list.where((m) => !m.dataMovimentacao.isBefore(_startDateFilter!));
+    }
+    if (_endDateFilter != null) {
+      list = list.where((m) => !m.dataMovimentacao.isAfter(_endDateFilter!));
+    }
+
+    // Limitar ao mês atual do AppBar, se habilitado
+    if (_limitToCurrentMonth) {
+      final m = _dataSelecionada.month;
+      final y = _dataSelecionada.year;
+      list = list.where((movi) => movi.dataMovimentacao.month == m && movi.dataMovimentacao.year == y);
+    }
+
+    return List<MovimentacaoModel>.unmodifiable(list);
+  }
+
+  // Ações de filtro
+  @action
+  void setSearchQuery(String value) => _searchQuery = value;
+
+  @action
+  void setFilterTipo(bool? isSaida) => _filterIsSaida = isSaida;
+
+  @action
+  void setFilterCategoria(int? idCategoria) => _filterCategoryId = idCategoria;
+
+  @action
+  void setFilterValor({double? min, double? max}) {
+    _minValueFilter = min;
+    _maxValueFilter = max;
+  }
+
+  @action
+  void setFilterPeriodo({DateTime? inicio, DateTime? fim}) {
+    _startDateFilter = inicio;
+    _endDateFilter = fim;
+  }
+
+  @action
+  void limparFiltros() {
+    _searchQuery = '';
+    _filterIsSaida = null;
+    _filterCategoryId = null;
+    _minValueFilter = null;
+    _maxValueFilter = null;
+    _startDateFilter = null;
+    _endDateFilter = null;
+  }
 
   /// Obtém o ID do usuário atualmente logado
   String? get currentUserId => _authService.userId;
@@ -286,8 +410,16 @@ abstract class HomeViewmodelBase with Store {
   /// Verifica se deve enviar notificações baseado na movimentação
   void _checkForNotifications(MovimentacaoModel movimentacao) {
     // Notifica gasto alto (acima de R$ 500)
-    if (movimentacao.isSaida && movimentacao.valor.abs() > 500) {
-      _notificationService.notifyHighExpense(movimentacao.valor.abs());
+    try {
+      final settings = Modular.get<SettingsViewmodel>();
+      // Preferência rápida (não bloquear): assume padrão false se não carregado
+      if (settings.notificationsEnabled && settings.highExpenseEnabled) {
+        if (movimentacao.isSaida && movimentacao.valor.abs() > 500) {
+          _notificationService.notifyHighExpense(movimentacao.valor.abs());
+        }
+      }
+    } catch (_) {
+      // Se não conseguir obter settings, não notifica para evitar comportamento inesperado
     }
 
     // Aqui você pode adicionar mais lógicas:

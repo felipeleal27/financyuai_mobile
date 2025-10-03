@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:neo_financyuai/app/viewmodel/settings/settings_viewmodel.dart';
 import 'package:neo_financyuai/app/database/sqllite/db.dart';
 import 'package:neo_financyuai/app/database/sqllite/sql_lite.dart';
 import 'package:neo_financyuai/app/service/notification_service.dart';
@@ -15,11 +17,17 @@ class AiRoutineService {
 
   final NotificationService _notifier = NotificationService();
   final AuthService _auth = AuthService();
+  final SettingsViewmodel _settings = Modular.get<SettingsViewmodel>();
 
   /// Executa a análise leve: identifica possíveis compromissos recorrentes e,
   /// se um deles estiver "atrasado" neste mês, emite um lembrete.
   Future<void> runDailyAnalysis() async {
     try {
+      await _settings.load();
+      if (!_settings.notificationsEnabled || !_settings.aiRoutineEnabled) {
+        if (kDebugMode) print('🔕 AI Routine notifications disabled');
+        return;
+      }
       final userId = _auth.userId;
       if (userId == null) return; // Precisa do usuário logado para filtrar dados
 

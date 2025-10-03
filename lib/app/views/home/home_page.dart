@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+import 'package:neo_financyuai/app/database/local_storage/local_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:neo_financyuai/app/data/model/categoria_model.dart';
@@ -20,7 +22,8 @@ import 'package:neo_financyuai/app/service/ai_debug_service.dart';
 import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final bool embedded;
+  const HomePage({super.key, this.embedded = false});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -202,11 +205,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             return Container(
                               decoration: BoxDecoration(
                                 color: helper.colorScheme.surface,
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(24),
+                                ),
                               ),
                               child: SafeArea(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 24,
+                                  ),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
@@ -215,8 +223,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         width: 40,
                                         height: 4,
                                         decoration: BoxDecoration(
-                                          color: helper.onSurfaceColor.withOpacity(0.3),
-                                          borderRadius: BorderRadius.circular(2),
+                                          color: helper.onSurfaceColor
+                                              .withOpacity(0.3),
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(height: 24),
@@ -235,11 +246,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ctx,
                                         icon: Icons.edit_outlined,
                                         title: 'Editar Transação',
-                                        subtitle: 'Modificar dados desta transação',
+                                        subtitle:
+                                            'Modificar dados desta transação',
                                         color: helper.colorScheme.primary,
                                         onTap: () {
                                           Navigator.of(ctx).pop();
-                                          _editarTransacao(context, movimentacao);
+                                          _editarTransacao(
+                                            context,
+                                            movimentacao,
+                                          );
                                         },
                                       ),
                                       const SizedBox(height: 12),
@@ -248,12 +263,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ctx,
                                         icon: Icons.copy_outlined,
                                         title: 'Duplicar Transação',
-                                        subtitle: 'Criar uma cópia desta transação',
+                                        subtitle:
+                                            'Criar uma cópia desta transação',
                                         color: helper.colorScheme.secondary,
                                         onTap: () {
                                           Navigator.of(ctx).pop();
                                           ToastificationUtils.info(
-                                            title: 'Funcionalidade de duplicar em breve!',
+                                            title:
+                                                'Funcionalidade de duplicar em breve!',
                                             context: context,
                                           );
                                         },
@@ -264,12 +281,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         ctx,
                                         icon: Icons.share_outlined,
                                         title: 'Compartilhar',
-                                        subtitle: 'Enviar detalhes por mensagem',
+                                        subtitle:
+                                            'Enviar detalhes por mensagem',
                                         color: Colors.blue,
                                         onTap: () {
                                           Navigator.of(ctx).pop();
                                           ToastificationUtils.info(
-                                            title: 'Funcionalidade de compartilhar em breve!',
+                                            title:
+                                                'Funcionalidade de compartilhar em breve!',
                                             context: context,
                                           );
                                         },
@@ -279,18 +298,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                       SizedBox(
                                         width: double.infinity,
                                         child: TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop(),
+                                          onPressed:
+                                              () => Navigator.of(ctx).pop(),
                                           style: TextButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 16,
+                                            ),
                                             shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
                                           child: Text(
                                             'Cancelar',
                                             style: TextStyle(
                                               fontSize: 16,
-                                              color: helper.onSurfaceColor.withOpacity(0.7),
+                                              color: helper.onSurfaceColor
+                                                  .withOpacity(0.7),
                                               fontFamily: 'Poppins',
                                               fontWeight: FontWeight.w500,
                                             ),
@@ -352,10 +376,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
-            ),
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
           ),
           child: Row(
             children: [
@@ -366,11 +387,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: Icon(icon, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -419,7 +436,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     required VoidCallback onTap,
   }) {
     final helper = AppThemeHelper.of(context);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -431,10 +448,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
-            ),
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
           ),
           child: Row(
             children: [
@@ -445,11 +459,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: Icon(icon, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -495,18 +505,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   ) {
     final id = movimentacao.id ?? '';
     final isRecorrente = id.contains('_parcela_') || id.contains('_fixa_');
-    
+
     if (!isRecorrente) {
       _showConfirmDeleteDialog(context, movimentacao);
       return;
     }
-    
+
     // Captura os valores do helper antes de abrir o modal
     final helper = AppThemeHelper.of(context);
     final surfaceColor = helper.colorScheme.surface;
     final onSurfaceColor = helper.onSurfaceColor;
     final errorColor = helper.colorScheme.error;
-    
+
     showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -638,15 +648,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
   }
 
-  void _editarTransacao(
-    BuildContext context,
-    MovimentacaoModel movimentacao,
-  ) {
+  void _editarTransacao(BuildContext context, MovimentacaoModel movimentacao) {
     // Agora sempre abrimos a tela de edição; o escopo da edição será
     // escolhido no momento de salvar na tela de edição.
     _abrirEdicaoTransacao(context, movimentacao);
   }
-
 
   void _abrirEdicaoTransacao(
     BuildContext context,
@@ -655,20 +661,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }) {
     // Por enquanto, vamos navegar para a nova transação passando os dados
     // Em uma implementação futura, isso poderia ser uma página específica de edição
-    final rota = movimentacao.isSaida 
-      ? '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateDespesa}'
-      : '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateReceita}';
-      
+    final rota =
+        movimentacao.isSaida
+            ? '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateDespesa}'
+            : '${HomeNomeRotas.navigate}${NovaTransacaoNomeRotas.navigateReceita}';
+
     // Navegar passando os dados da transação como argumentos
-    Modular.to.pushNamed(rota, arguments: {
-      'movimentacao': movimentacao,
-      'isEdicao': true,
-      'tipoEdicao': tipoEdicao,
-    }).then((_) async {
-      // Recarrega as transações após a edição
-      await viewmodel.carregarMovimentacoes();
-      (_appBarKey.currentState as dynamic)?.atualizarSaldo();
-    });
+    Modular.to
+        .pushNamed(
+          rota,
+          arguments: {
+            'movimentacao': movimentacao,
+            'isEdicao': true,
+            'tipoEdicao': tipoEdicao,
+          },
+        )
+        .then((_) async {
+          // Recarrega as transações após a edição
+          await viewmodel.carregarMovimentacoes();
+          (_appBarKey.currentState as dynamic)?.atualizarSaldo();
+        });
   }
 
   void _showConfirmDeleteDialog(
@@ -677,25 +689,29 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     String? tipoRemocao,
   ]) {
     final helper = AppThemeHelper.of(context);
-    
+
     // Define o texto baseado no tipo de remoção
     String titulo = 'Confirmar Exclusão';
     String mensagem;
     String botaoConfirmar = 'Excluir';
-    
+
     switch (tipoRemocao) {
       case 'apenas_esta':
-        mensagem = 'Tem certeza que deseja excluir apenas esta ocorrência da transação "${movimentacao.nome}"?';
+        mensagem =
+            'Tem certeza que deseja excluir apenas esta ocorrência da transação "${movimentacao.nome}"?';
         break;
       case 'desta_pra_frente':
-        mensagem = 'Tem certeza que deseja excluir esta e todas as próximas ocorrências da transação "${movimentacao.nome}"?';
+        mensagem =
+            'Tem certeza que deseja excluir esta e todas as próximas ocorrências da transação "${movimentacao.nome}"?';
         break;
       case 'todas_relacionadas':
-        mensagem = 'Tem certeza que deseja excluir DEFINITIVAMENTE todas as ocorrências da transação "${movimentacao.nome}"?';
+        mensagem =
+            'Tem certeza que deseja excluir DEFINITIVAMENTE todas as ocorrências da transação "${movimentacao.nome}"?';
         botaoConfirmar = 'Excluir Tudo';
         break;
       default:
-        mensagem = 'Tem certeza que deseja excluir a transação "${movimentacao.nome}"?';
+        mensagem =
+            'Tem certeza que deseja excluir a transação "${movimentacao.nome}"?';
     }
 
     showDialog(
@@ -749,14 +765,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ElevatedButton(
               onPressed: () async {
                 Navigator.of(dialogContext).pop();
-                
+
                 // Executa a remoção baseada no tipo
                 switch (tipoRemocao) {
                   case 'apenas_esta':
                     await viewmodel.removerMovimentacao(movimentacao);
                     break;
                   case 'desta_pra_frente':
-                    await viewmodel.removerTransacoesDestaPraFrente(movimentacao);
+                    await viewmodel.removerTransacoesDestaPraFrente(
+                      movimentacao,
+                    );
                     break;
                   case 'todas_relacionadas':
                     await viewmodel.removerTransacoesRelacionadas(movimentacao);
@@ -765,21 +783,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     // Transação única
                     await viewmodel.removerMovimentacao(movimentacao);
                 }
-                
+
                 // Atualiza o saldo
                 (_appBarKey.currentState as dynamic)?.atualizarSaldo();
-                
+
                 // Mostra confirmação
                 if (context.mounted) {
-                  final msg = tipoRemocao == 'todas_relacionadas'
-                      ? 'Todas as ocorrências foram excluídas'
-                      : tipoRemocao == 'desta_pra_frente'
+                  final msg =
+                      tipoRemocao == 'todas_relacionadas'
+                          ? 'Todas as ocorrências foram excluídas'
+                          : tipoRemocao == 'desta_pra_frente'
                           ? 'Transações a partir desta data foram excluídas'
                           : 'Transação excluída com sucesso';
-                  ToastificationUtils.success(
-                    title: msg,
-                    context: context,
-                  );
+                  ToastificationUtils.success(title: msg, context: context);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -823,10 +839,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           decoration: BoxDecoration(
             color: color.withOpacity(0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: color.withOpacity(0.2),
-              width: 1,
-            ),
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
           ),
           child: Row(
             children: [
@@ -837,11 +850,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   color: color,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 24,
-                ),
+                child: Icon(icon, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -1079,6 +1088,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   void _showFilterModal(BuildContext context) {
     final helper = AppThemeHelper.of(context);
+    final vm = viewmodel;
 
     showModalBottomSheet(
       context: context,
@@ -1121,76 +1131,175 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 32),
                 // Filtros por período
+                _sectionHeader(helper, Icons.calendar_month, 'Período'),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(
-                      Icons.calendar_month,
-                      color: helper.colorScheme.primary,
-                      size: 20,
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: modalContext,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) vm.setFilterPeriodo(inicio: date);
+                        },
+                        icon: const Icon(Icons.date_range),
+                        label: Text('Início', style: TextStyle(color: helper.onSurfaceColor)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: helper.colorScheme.primary,
+                          side: BorderSide(color: helper.onSurfaceColor.withOpacity(0.2)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      'Período',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: helper.onSurfaceColor,
-                        fontFamily: 'Poppins',
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final date = await showDatePicker(
+                            context: modalContext,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (date != null) vm.setFilterPeriodo(fim: date);
+                        },
+                        icon: const Icon(Icons.event),
+                        label: Text('Fim', style: TextStyle(color: helper.onSurfaceColor)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: helper.colorScheme.primary,
+                          side: BorderSide(color: helper.onSurfaceColor.withOpacity(0.2)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Switch(
+                      value: vm.limitToCurrentMonth,
+                      onChanged: (v) => vm.setLimitToCurrentMonth(v),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Limitar ao mês atual (AppBar)',
+                        style: TextStyle(color: helper.onSurfaceColor.withOpacity(0.9)),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 // Filtros por tipo
-                Row(
-                  children: [
-                    Icon(
-                      Icons.category,
-                      color: helper.colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Tipo de Transação',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: helper.onSurfaceColor,
-                        fontFamily: 'Poppins',
+                _sectionHeader(helper, Icons.swap_vert_circle_outlined, 'Tipo de Transação'),
+                const SizedBox(height: 10),
+                Observer(builder: (_) {
+                  return Wrap(
+                    spacing: 8,
+                    children: [
+                      _choiceChip(
+                        helper,
+                        label: 'Todas',
+                        selected: vm.filterIsSaida == null,
+                        onSelected: (_) => vm.setFilterTipo(null),
                       ),
-                    ),
-                  ],
-                ),
+                      _choiceChip(
+                        helper,
+                        label: 'Receitas',
+                        selected: vm.filterIsSaida == false,
+                        onSelected: (_) => vm.setFilterTipo(false),
+                      ),
+                      _choiceChip(
+                        helper,
+                        label: 'Despesas',
+                        selected: vm.filterIsSaida == true,
+                        onSelected: (_) => vm.setFilterTipo(true),
+                      ),
+                    ],
+                  );
+                }),
+                const SizedBox(height: 16),
+                // Filtro por categoria
+                _sectionHeader(helper, Icons.category_outlined, 'Categoria'),
+                const SizedBox(height: 10),
+                Observer(builder: (_) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int?>(
+                          value: vm.filterCategoryId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(hintText: 'Selecione uma categoria'),
+                          items: [
+                            const DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text('Todas as categorias'),
+                            ),
+                            ...vm.categoria.map((c) => DropdownMenuItem<int?>(
+                                  value: c.id,
+                                  child: Text(c.nome),
+                                )),
+                          ],
+                          onChanged: (val) => vm.setFilterCategoria(val),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        tooltip: 'Limpar categoria',
+                        onPressed: () => vm.setFilterCategoria(null),
+                        icon: const Icon(Icons.clear),
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 16),
                 // Filtros por valor
-                Row(
-                  children: [
-                    Icon(
-                      Icons.attach_money,
-                      color: helper.colorScheme.primary,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Faixa de Valor',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: helper.onSurfaceColor,
-                        fontFamily: 'Poppins',
+                _sectionHeader(helper, Icons.attach_money, 'Faixa de Valor'),
+                const SizedBox(height: 10),
+                Observer(builder: (_) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(hintText: 'Mínimo'),
+                          onSubmitted: (v) {
+                            final min = double.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
+                            vm.setFilterValor(min: min, max: vm.maxValueFilter);
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(hintText: 'Máximo'),
+                          onSubmitted: (v) {
+                            final max = double.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
+                            vm.setFilterValor(min: vm.minValueFilter, max: max);
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 32),
                 // Botões de ação
                 Row(
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: () => Navigator.of(modalContext).pop(),
+                        onPressed: () {
+                          vm.limparFiltros();
+                          Navigator.of(modalContext).pop();
+                        },
                         child: Text(
-                          'Cancelar',
+                          'Limpar',
                           style: TextStyle(
                             color: helper.onSurfaceColor.withOpacity(0.7),
                             fontFamily: 'Poppins',
@@ -1232,14 +1341,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // Constrói a lista de transações agrupadas por data e ordenadas como pilha
   Widget _buildTransactionsList() {
-    if (viewmodel.movimentacoes.isEmpty) {
+    final list = viewmodel.filteredMovimentacoes;
+    if (list.isEmpty) {
       return const SizedBox.shrink();
     }
 
     // 1. Agrupa as transações por data (sem ordenar ainda)
     final Map<String, List<MovimentacaoModel>> groupedByDate = {};
 
-    for (final transaction in viewmodel.movimentacoes) {
+  for (final transaction in list) {
       // Formatar o dia da semana sem "-feira" e com primeira letra maiúscula
       String dayName = DateFormat(
         'EEEE',
@@ -1374,83 +1484,85 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         _showFilterModal(context);
                       },
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                await NotificationService()
-                                    .sendTestNotification();
-                              },
-                              icon: const Icon(
-                                Icons.notifications_active_outlined,
-                              ),
-                              label: const Text('Testar notificação'),
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                    if (kDebugMode)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await NotificationService()
+                                      .sendTestNotification();
+                                },
+                                icon: const Icon(
+                                  Icons.notifications_active_outlined,
+                                ),
+                                label: const Text('Testar notificação'),
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
-                            ),
-                            // Debug IA: Rodar agora
-                            ElevatedButton.icon(
-                              onPressed: () async {
-                                await AiDebugService().runAllNow();
-                                if (!context.mounted) return;
-                                ToastificationUtils.info(
-                                  title: 'IA executada agora (rotinas, feriados, previsão)',
-                                  context: context,
-                                );
-                              },
-                              icon: const Icon(Icons.play_circle_outline),
-                              label: const Text('Rodar IA agora'),
-                              style: ElevatedButton.styleFrom(
-                                elevation: 0,
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                              // Debug IA: Rodar agora
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await AiDebugService().runAllNow();
+                                  if (!context.mounted) return;
+                                  ToastificationUtils.info(
+                                    title:
+                                        'IA executada agora (rotinas, feriados, previsão)',
+                                    context: context,
+                                  );
+                                },
+                                icon: const Icon(Icons.play_circle_outline),
+                                label: const Text('Rodar IA agora'),
+                                style: ElevatedButton.styleFrom(
+                                  elevation: 0,
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
-                            ),
-                            // Debug IA: Reset flags
-                            OutlinedButton.icon(
-                              onPressed: () async {
-                                final removed =
-                                    await AiDebugService().resetIaFlags();
-                                if (!context.mounted) return;
-                                ToastificationUtils.info(
-                                  title: 'Flags de IA limpas: $removed',
-                                  context: context,
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.cleaning_services_outlined,
-                              ),
-                              label: const Text('Resetar flags IA'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                              // Debug IA: Reset flags
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final removed =
+                                      await AiDebugService().resetIaFlags();
+                                  if (!context.mounted) return;
+                                  ToastificationUtils.info(
+                                    title: 'Flags de IA limpas: $removed',
+                                    context: context,
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.cleaning_services_outlined,
+                                ),
+                                label: const Text('Resetar flags IA'),
+                                style: OutlinedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
                     barraDePesquisa(helper),
                   ],
                 ),
@@ -1521,10 +1633,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ],
           ),
           // Chat bubble (já é Positioned internamente)
-          DraggableChatBubble(onTap: _openChatIA),
+          FutureBuilder<bool>(
+            future: _shouldShowChatBubble(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done)
+                return const SizedBox.shrink();
+              if (snapshot.data == false) return const SizedBox.shrink();
+              return DraggableChatBubble(onTap: _openChatIA);
+            },
+          ),
         ],
       ),
-      floatingActionButton: SizedBox(
+      floatingActionButton: widget.embedded
+          ? null
+          : SizedBox(
         width: 64,
         height: 64,
         child: FloatingActionButton(
@@ -1540,9 +1662,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           child: const Icon(Icons.add, size: 28),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 0),
+      floatingActionButtonLocation:
+          widget.embedded ? null : FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar:
+          widget.embedded ? null : const CustomBottomNavigationBar(currentIndex: 0),
     );
+  }
+
+  Future<bool> _shouldShowChatBubble() async {
+    try {
+      final storage = Modular.get<LocalStorage>();
+      final saved = await storage.read<bool>('settings.chatbot.enabled');
+      // Por padrão, habilitado caso nunca tenha sido salvo
+      return saved ?? true;
+    } catch (_) {
+      return true;
+    }
   }
 
   Padding barraDePesquisa(AppThemeHelper helper) {
@@ -1559,6 +1694,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             fontWeight: FontWeight.w500,
           ),
           cursorColor: helper.colorScheme.primary,
+          onChanged: (v) => viewmodel.setSearchQuery(v),
           decoration: InputDecoration(
             filled: true,
             fillColor:
@@ -1598,6 +1734,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  // Helpers visuais do filter sheet
+  Widget _sectionHeader(AppThemeHelper helper, IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, color: helper.colorScheme.primary, size: 20),
+        const SizedBox(width: 12),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: helper.onSurfaceColor,
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _choiceChip(AppThemeHelper helper, {required String label, required bool selected, required ValueChanged<bool> onSelected}) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: helper.colorScheme.primary.withOpacity(0.15),
+      labelStyle: TextStyle(
+        color: selected ? helper.colorScheme.primary : helper.onSurfaceColor,
+        fontFamily: 'Poppins',
+        fontWeight: FontWeight.w600,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      backgroundColor: helper.brightness == Brightness.light
+          ? const Color(0xFFEFF3F7)
+          : helper.colorScheme.onSurface.withOpacity(0.06),
     );
   }
 
@@ -1658,18 +1831,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.delete,
-                      color: onErrorColor,
-                      size: 24,
-                    ),
+                    Icon(Icons.delete, color: onErrorColor, size: 24),
                     const SizedBox(height: 5),
                     Text(
                       'Remover',
-                      style: TextStyle(
-                        color: onErrorColor,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: onErrorColor, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -1686,11 +1852,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     return Container(
                       decoration: BoxDecoration(
                         color: surfaceColor,
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
                       ),
                       child: SafeArea(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 24,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -1739,7 +1910,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 onTap: () {
                                   Navigator.of(ctx).pop();
                                   ToastificationUtils.info(
-                                    title: 'Funcionalidade de duplicar em breve!',
+                                    title:
+                                        'Funcionalidade de duplicar em breve!',
                                     context: context,
                                   );
                                 },
@@ -1756,7 +1928,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 onTap: () {
                                   Navigator.of(ctx).pop();
                                   ToastificationUtils.info(
-                                    title: 'Funcionalidade de compartilhar em breve!',
+                                    title:
+                                        'Funcionalidade de compartilhar em breve!',
                                     context: context,
                                   );
                                 },
@@ -1768,7 +1941,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 child: TextButton(
                                   onPressed: () => Navigator.of(ctx).pop(),
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 16,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -1805,18 +1980,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.more_horiz,
-                      color: onSecondaryColor,
-                      size: 24,
-                    ),
+                    Icon(Icons.more_horiz, color: onSecondaryColor, size: 24),
                     const SizedBox(height: 5),
                     Text(
                       'Mais',
-                      style: TextStyle(
-                        color: onSecondaryColor,
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: onSecondaryColor, fontSize: 12),
                       textAlign: TextAlign.center,
                     ),
                   ],

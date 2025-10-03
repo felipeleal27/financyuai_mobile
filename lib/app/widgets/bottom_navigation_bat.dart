@@ -3,6 +3,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/settings/module/settings_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/orcamento/module/orcamento_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_nome_rotas.dart';
 
 /// Widget de barra de navegação inferior customizada.
@@ -12,6 +13,9 @@ import 'package:neo_financyuai/app/views/estatisticas/module/estatisticas_nome_r
 class CustomBottomNavigationBar extends StatelessWidget {
   /// Índice da aba atualmente selecionada.
   final int currentIndex;
+  /// Callback opcional para sobrescrever a navegação padrão.
+  /// Quando fornecido, será chamado no tap em vez de navegar via Modular.
+  final ValueChanged<int>? onTapOverride;
 
   /// Cria uma nova instância de [CustomBottomNavigationBar].
   /// 
@@ -19,6 +23,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
   const CustomBottomNavigationBar({
     super.key,
     required this.currentIndex,
+    this.onTapOverride,
   });
 
   /// Manipula o toque em um item da barra de navegação.
@@ -27,6 +32,13 @@ class CustomBottomNavigationBar extends StatelessWidget {
   void _onItemTapped(int index) {
     // Pula o índice 2 que é onde fica o FAB
     if (index == 2) return;
+    // Evita navegar novamente para a mesma aba
+    if (index == currentIndex) return;
+    // Se houver sobrescrita, delega e não navega
+    if (onTapOverride != null) {
+      onTapOverride!(index);
+      return;
+    }
     
     switch (index) {
       case 0:
@@ -36,8 +48,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
         Modular.to.navigate(EstatisticasNomeRotas.navigate);
         break;
       case 3:
-        // Navegar para carteira/conta
-        // Modular.to.navigate(CarteiraNomoRotas.navigate);
+        Modular.to.navigate(OrcamentoNomeRotas.navigate);
         break;
       case 4:
         // Navegar para configurações
@@ -97,7 +108,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(
-              currentIndex == 1 ? Icons.analytics : Icons.analytics_outlined,
+              currentIndex == 1 ? Icons.bar_chart : Icons.bar_chart_outlined,
               size: 24,
             ),
             label: 'Estatísticas',
@@ -111,7 +122,7 @@ class CustomBottomNavigationBar extends StatelessWidget {
               currentIndex == 3 ? Icons.account_balance_wallet : Icons.account_balance_wallet_outlined,
               size: 24,
             ),
-            label: 'Carteira',
+            label: 'Orçamento',
           ),
           BottomNavigationBarItem(
             icon: Icon(

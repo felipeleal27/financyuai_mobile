@@ -11,14 +11,18 @@ import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/login/module/login_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/bottom_navigation_bat.dart';
 import 'package:neo_financyuai/app/widgets/cached_user_avatar_sqlite.dart';
+import 'package:neo_financyuai/app/views/chat_ia/module/chat_ia_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/settings/module/settings_nome_rotas.dart';
 
 /// Página de configurações da aplicação.
 ///
 /// Permite ao usuário gerenciar preferências de tema, conta e funcionalidades
 /// como chatbot, além de fornecer opções de logout.
 class SettingsPage extends StatefulWidget {
+  /// Quando true, indica que a página está renderizada dentro do shell de abas.
+  final bool embedded;
   /// Cria uma nova instância de [SettingsPage].
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.embedded = false});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -37,32 +41,34 @@ class _SettingsPageState extends State<SettingsPage> {
   /// Gerenciador de temas da aplicação.
   final themeManager = Modular.get<ThemeManager>();
 
+  @override
+  void initState() {
+    super.initState();
+    // Carrega estado do assistente flutuante salvo
+    viewmodel.load();
+  }
+
   /// Navega para a Home e abre o modal de nova movimentação.
   ///
   /// Utiliza callback para sincronizar a navegação com a abertura do modal.
   void _navigateToHomeAndOpenModal() {
-    debugPrint('Settings: Iniciando navegação...');
-    // Primeiro navega para a home
-    Modular.to.navigate(HomeNomeRotas.navigate);
-
-    // Aguarda um frame e então define a flag
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        try {
-          final homeVm = Modular.get<HomeViewmodel>();
-          debugPrint('Settings: Obteve instância do HomeViewmodel');
-          debugPrint(
-            'Settings: Antes de setar flag - shouldOpenDialog: ${homeVm.shouldOpenDialog}',
-          );
-          homeVm.isDialogOpen(true);
-          debugPrint(
-            'Settings: Depois de setar flag - shouldOpenDialog: ${homeVm.shouldOpenDialog}',
-          );
-        } catch (e) {
-          debugPrint('Settings: Erro ao obter HomeViewmodel: $e');
-        }
+    debugPrint('Settings: Solicitar abertura de Nova Transação');
+    // Se estivermos dentro do shell, não precisamos navegar; apenas sinalizamos o HomeViewmodel
+    try {
+      final homeVm = Modular.get<HomeViewmodel>();
+      homeVm.isDialogOpen(true);
+    } catch (e) {
+      // Fallback: se não houver VM (fora do shell), navega para Home e então abre
+      Modular.to.navigate('/home/');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          try {
+            final homeVm = Modular.get<HomeViewmodel>();
+            homeVm.isDialogOpen(true);
+          } catch (_) {}
+        });
       });
-    });
+    }
   }
 
   @override
@@ -85,28 +91,31 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: helper.colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.arrow_back_ios_new,
-              color: helper.colorScheme.primary,
-              size: 16,
-            ),
-          ),
-          onPressed: () {
-            // Primeiro tenta pop do Navigator, senão navega para home
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            } else {
-              Modular.to.navigate(HomeNomeRotas.navigate);
-            }
-          },
-        ),
+        automaticallyImplyLeading: !widget.embedded,
+        leading: widget.embedded
+            ? null
+            : IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: helper.colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.arrow_back_ios_new,
+                    color: helper.colorScheme.primary,
+                    size: 16,
+                  ),
+                ),
+                onPressed: () {
+                  // Primeiro tenta pop do Navigator, senão navega para home
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Modular.to.navigate(HomeNomeRotas.navigate);
+                  }
+                },
+              ),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -147,7 +156,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 Icons.chat_bubble_outline,
                 'Conversar com IA',
                 'Abrir chat com assistente',
-                onTap: () {},
+                onTap: () {
+                  Modular.to.pushNamed(ChatIANomeRotas.navigate);
+                },
               ),
             ]),
 
@@ -171,14 +182,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Icons.notifications_outlined,
                 'Notificações',
                 'Configurar alertas e lembretes',
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                helper,
-                Icons.backup_outlined,
-                'Backup & Sincronização',
-                'Gerenciar dados na nuvem',
-                onTap: () {},
+                onTap: () => Modular.to.pushNamed(SettingsNomeRotas.navigateNotifications),
               ),
             ]),
 
@@ -204,7 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
-      floatingActionButton: SizedBox(
+      floatingActionButton: widget.embedded ? null : SizedBox(
         width: 64,
         height: 64,
         child: FloatingActionButton(
@@ -218,8 +222,10 @@ class _SettingsPageState extends State<SettingsPage> {
           child: const Icon(Icons.add, size: 28),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 4),
+      floatingActionButtonLocation:
+          widget.embedded ? null : FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar:
+          widget.embedded ? null : const CustomBottomNavigationBar(currentIndex: 4),
     );
   }
 

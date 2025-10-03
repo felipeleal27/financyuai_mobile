@@ -16,8 +16,8 @@ import 'package:timezone/data/latest.dart' as tz;
 /// - Diferentes tipos de notificações financeiras
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
-  // Flag global para desativar todas as notificações
-  static const bool _enabled = false;
+  // Flag global para desativar/ativar todas as notificações (persistida)
+  bool _enabled = false;
   
   /// Retorna a instância singleton do serviço
   factory NotificationService() => _instance;
@@ -29,6 +29,11 @@ class NotificationService {
 
   /// Inicializa o serviço de notificações
   Future<void> initialize() async {
+    // Carrega flag salva
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _enabled = prefs.getBool('settings.notifications.enabled') ?? false;
+    } catch (_) {}
     if (!_enabled) {
       if (kDebugMode) debugPrint('🔕 Notificações desativadas globalmente');
       // Tentar cancelar qualquer notificação pré-existente
@@ -67,6 +72,90 @@ class NotificationService {
     }
     
     debugPrint('🔔 Notification Service inicializado (com possíveis limitações)');
+  }
+
+  bool get isEnabled => _enabled;
+
+  /// Atualiza a flag de notificações e aplica efeitos colaterais (persistência, permissões, cancelamentos).
+  Future<void> setEnabled(bool value) async {
+    _enabled = value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('settings.notifications.enabled', value);
+    } catch (_) {}
+
+    if (value) {
+      await initialize();
+    } else {
+      // Cancela tudo quando desativar
+      try { await _localNotifications.cancelAll(); } catch (_) {}
+    }
+  }
+
+  /// Primeiro uso: pergunta permissão do sistema e aplica padrão (ligar tudo se permitido)
+  Future<void> onboardIfFirstRun() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final already = prefs.getBool('settings.notifications.onboarded') ?? false;
+      if (already) return;
+
+      // Solicita permissões do sistema (FCM + locais) sem depender do _enabled
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+      await _requestLocalPermissions();
+
+      final granted = settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+
+      // Marca onboarding concluído
+      await prefs.setBool('settings.notifications.onboarded', true);
+
+      // Define padrões: se permitido, liga tudo; senão, mantém tudo desligado
+      await prefs.setBool('settings.notifications.enabled', granted);
+      await prefs.setBool('settings.notifications.daily.enabled', granted);
+      await prefs.setBool('settings.notifications.ai.routine', granted);
+      await prefs.setBool('settings.notifications.ai.holiday', granted);
+      await prefs.setBool('settings.notifications.ai.balanceForecast', granted);
+      await prefs.setBool('settings.notifications.highExpense', granted);
+      await prefs.setBool('settings.notifications.monthlyReport', granted);
+      await prefs.setBool('settings.notifications.savingsAchieved', granted);
+
+      if (granted) {
+        // Inicializa subsistemas e agenda lembretes padrão
+        await setEnabled(true);
+        await toggleDefaultDailyReminders(true);
+      } else {
+        await setEnabled(false);
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('⚠️ Falha no onboarding de notificações: $e');
+    }
+  }
+
+  /// Verifica se o app tem permissão do sistema para enviar notificações
+  Future<bool> hasSystemPermission() async {
+    try {
+      final settings = await _firebaseMessaging.getNotificationSettings();
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Solicita novamente as permissões do sistema, retornando true se concedidas
+  Future<bool> requestSystemPermission() async {
+    try {
+      await _requestPermissions();
+      await _requestLocalPermissions();
+      return await hasSystemPermission();
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Solicita permissões para notificações
@@ -276,6 +365,8 @@ class NotificationService {
   /// Notificação de meta atingida
   Future<void> notifyGoalReached(String goalName, double amount) async {
     if (!_enabled) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('settings.notifications.savingsAchieved') ?? false)) return;
     await _showLocalNotification(
       id: 1,
       title: '🎯 Meta Atingida!',
@@ -287,6 +378,8 @@ class NotificationService {
   /// Lembrete para adicionar transação
   Future<void> reminderAddTransaction() async {
     if (!_enabled) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('settings.notifications.daily.enabled') ?? false)) return;
     await _showLocalNotification(
       id: 3,
       title: '💰 Lembrete',
@@ -298,6 +391,8 @@ class NotificationService {
   /// Relatório mensal disponível
   Future<void> notifyMonthlyReport() async {
     if (!_enabled) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('settings.notifications.monthlyReport') ?? false)) return;
     await _showLocalNotification(
       id: 4,
       title: '📊 Relatório Mensal',
@@ -309,6 +404,8 @@ class NotificationService {
   /// Notificação de gasto alto
   Future<void> notifyHighExpense(double amount) async {
     if (!_enabled) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('settings.notifications.highExpense') ?? false)) return;
     await _showLocalNotification(
       id: 2,
       title: '⚠️ Gasto Alto Detectado',
@@ -323,7 +420,10 @@ class NotificationService {
     required double currentExpenses,
     required String category,
   }) async {
-    if (!_enabled) return;
+  if (!_enabled) return;
+  final prefs = await SharedPreferences.getInstance();
+  // Reutiliza a flag de relatório mensal como genérica para finanças; pode separar depois se quiser
+  if (!(prefs.getBool('settings.notifications.monthlyReport') ?? false)) return;
     final percentage = (currentExpenses / budgetLimit * 100).round();
     
     await _showLocalNotification(
@@ -342,6 +442,8 @@ class NotificationService {
   /// Notificação de economia conquistada
   Future<void> notifySavingsAchieved(double savedAmount) async {
     if (!_enabled) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (!(prefs.getBool('settings.notifications.savingsAchieved') ?? false)) return;
     await _showLocalNotification(
       id: 6,
       title: '🎉 Economia Conquistada!',
@@ -376,9 +478,10 @@ class NotificationService {
     }
   }
 
-  /// Envia uma notificação local de teste, independentemente do flag global.
+  /// Envia uma notificação local de teste (respeita o flag global).
   /// Útil para validar visualmente o sistema de notificação no dispositivo.
   Future<void> sendTestNotification() async {
+    if (!_enabled) return;
     try {
       // Garante permissões locais mínimas (Android 13+)
       await _requestLocalPermissions();
@@ -422,6 +525,7 @@ class NotificationService {
     required String body,
     int id = 10000,
   }) async {
+    if (!_enabled) return;
     try {
       if (kDebugMode) {
         debugPrint('🔔 IA sendSimpleNotification: "$title" - iniciando envio');
@@ -521,6 +625,18 @@ class NotificationService {
     if (kDebugMode) {
       debugPrint('📅 Lembrete diário agendado para ${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}');
     }
+  }
+
+  /// Ativa ou desativa os lembretes financeiros padrão (20:00 e 22:00)
+  Future<void> toggleDefaultDailyReminders(bool enabled) async {
+    if (!enabled) {
+      try {
+        await cancelNotification(2000);
+        await cancelNotification(2200);
+      } catch (_) {}
+      return;
+    }
+    await setupFinancialReminders();
   }
 
   /// Obtém o token FCM atual
