@@ -11,7 +11,9 @@ class SettingsNomeRotas {
   
   /// Rota inicial das configurações.
   static const String inicial = "/settings_inicio";
+  static const String notifications = "/notifications";
   
   /// Rota completa para navegação para as configurações.
   static const String navigate = "$modulo$inicial";
+  static const String navigateNotifications = "$modulo$notifications";
 }

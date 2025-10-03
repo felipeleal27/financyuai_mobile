@@ -28,6 +28,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // Pergunta permissões de notificação no primeiro uso e define padrões
+  try {
+    await NotificationService().onboardIfFirstRun();
+  } catch (_) {}
   
   // Inicializa serviços em segundo plano
   await _initializeServices();

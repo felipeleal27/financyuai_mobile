@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_modular/flutter_modular.dart';
+import 'package:neo_financyuai/app/viewmodel/settings/settings_viewmodel.dart';
 import 'package:neo_financyuai/app/database/sqllite/db.dart';
 import 'package:neo_financyuai/app/database/sqllite/sql_lite.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
@@ -14,10 +16,16 @@ class AiBalanceForecastService {
 
   final AuthService _auth = AuthService();
   final NotificationService _notifier = NotificationService();
+  final SettingsViewmodel _settings = Modular.get<SettingsViewmodel>();
 
   /// Roda a previsão e notifica se houver risco (uma vez por dia).
   Future<void> runDailyForecast() async {
     try {
+      await _settings.load();
+      if (!_settings.notificationsEnabled || !_settings.aiBalanceForecastEnabled) {
+        if (kDebugMode) print('🔕 AI Balance Forecast notifications disabled');
+        return;
+      }
       final userId = _auth.userId;
       if (userId == null) return;
 

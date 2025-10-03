@@ -6,7 +6,6 @@ import 'package:neo_financyuai/app/service/connectivity_service.dart';
 import 'package:neo_financyuai/app/repository/usuario_google_repository.dart';
 import 'package:neo_financyuai/app/data/model/usuario_google_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 
 part 'login_viewmodel.g.dart';
 
@@ -109,8 +108,8 @@ abstract class LoginViewmodelBase with Store {
         //  await SaldoService().errecalcularTodosOsSaldos();
         }
         
-        // Login bem-sucedido, navegar para home
-        Modular.to.navigate(HomeNomeRotas.navigate);
+  // Login bem-sucedido, navegar para o shell de abas
+  Modular.to.navigate('/app/tabs');
         return true;
       }
       
@@ -166,8 +165,8 @@ abstract class LoginViewmodelBase with Store {
       final userCredential = await _authService.signInWithEmailAndPassword(email, password);
       
       if (userCredential != null) {
-        // Login bem-sucedido, navegar para home
-        Modular.to.navigate('/home/');
+  // Login bem-sucedido, navegar para o shell de abas
+  Modular.to.navigate('/app/tabs');
         return true;
       }
       
@@ -232,8 +231,8 @@ abstract class LoginViewmodelBase with Store {
       );
       
       if (userCredential != null) {
-        // Registro bem-sucedido, navegar para home
-        Modular.to.navigate('/home/');
+  // Registro bem-sucedido, navegar para o shell de abas
+  Modular.to.navigate('/app/tabs');
         return true;
       }
       
@@ -332,8 +331,8 @@ abstract class LoginViewmodelBase with Store {
           debugPrint('🖼️ Tem foto local: ${usuarioOffline.hasLocalPhoto}');
         }
         
-        // Navega para home com usuário offline
-        Modular.to.navigate(HomeNomeRotas.navigate);
+  // Navega para o shell de abas com usuário offline
+  Modular.to.navigate('/app/tabs');
         
         // Exibe mensagem informativa sobre modo offline
         _setErrorMessage('Conectado no modo offline com ${usuarioOffline.nome ?? usuarioOffline.email ?? 'usuário anterior'}');
@@ -467,6 +466,6 @@ abstract class LoginViewmodelBase with Store {
   /// Navega para a tela inicial (home) após login bem-sucedido
   Future<void> _navigateToHome() async {
     // Aqui você pode adicionar lógica adicional, se necessário, antes de navegar para a home
-    Modular.to.navigate(HomeNomeRotas.navigate);
+  Modular.to.navigate('/app/tabs');
   }
 }

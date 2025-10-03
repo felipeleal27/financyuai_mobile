@@ -4,7 +4,6 @@ import 'package:neo_financyuai/app/service/auth_service.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/viewmodel/slpash_screen/splash_screen_viewmodel.dart';
 import 'package:neo_financyuai/app/views/login/module/login_nome_rotas.dart';
-import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 
 /// Página de splash screen da aplicação.
 /// 
@@ -67,8 +66,8 @@ class _SplashScreenPageState extends State<SplashScreenPage> {
   Future<void> _checkAuthAndNavigate() async {
     // Verifica se o usuário está autenticado
     if (authService.isAuthenticated) {
-      // Usuário já logado, vai para home
-      Modular.to.pushReplacementNamed(HomeNomeRotas.navigate);
+      // Usuário já logado, vai para o shell de abas (navegação fluida)
+      Modular.to.pushReplacementNamed('/app/tabs');
     } else {
       // Usuário não logado, vai para login
       Modular.to.pushReplacementNamed(LoginNomeRotas.navigate);

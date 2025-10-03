@@ -11,6 +11,8 @@ import 'package:neo_financyuai/app/views/home/module/home_nome_rotas.dart';
 import 'package:neo_financyuai/app/views/login/module/login_nome_rotas.dart';
 import 'package:neo_financyuai/app/widgets/bottom_navigation_bat.dart';
 import 'package:neo_financyuai/app/widgets/cached_user_avatar_sqlite.dart';
+import 'package:neo_financyuai/app/views/chat_ia/module/chat_ia_nome_rotas.dart';
+import 'package:neo_financyuai/app/views/settings/module/settings_nome_rotas.dart';
 
 class SettingsPageNew extends StatefulWidget {
   const SettingsPageNew({super.key});
@@ -23,6 +25,12 @@ class _SettingsPageNewState extends State<SettingsPageNew> {
   final viewmodel = Modular.get<SettingsViewmodel>();
   final authService = AuthService();
   final themeManager = Modular.get<ThemeManager>();
+
+  @override
+  void initState() {
+    super.initState();
+    viewmodel.load();
+  }
 
   void _navigateToHomeAndOpenModal() async {
     debugPrint('⚙️ Settings: FloatingActionButton clicado');
@@ -128,7 +136,9 @@ class _SettingsPageNewState extends State<SettingsPageNew> {
                 Icons.chat_bubble_outline,
                 'Conversar com IA',
                 'Abrir chat com assistente',
-                onTap: () {},
+                onTap: () {
+                  Modular.to.pushNamed(ChatIANomeRotas.navigate);
+                },
               ),
             ]),
 
@@ -147,14 +157,7 @@ class _SettingsPageNewState extends State<SettingsPageNew> {
                 Icons.notifications_outlined,
                 'Notificações',
                 'Configurar alertas e lembretes',
-                onTap: () {},
-              ),
-              _buildSettingItem(
-                helper,
-                Icons.backup_outlined,
-                'Backup & Sincronização',
-                'Gerenciar dados na nuvem',
-                onTap: () {},
+                onTap: () => Modular.to.pushNamed(SettingsNomeRotas.navigateNotifications),
               ),
             ]),
 

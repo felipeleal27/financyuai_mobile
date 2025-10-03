@@ -22,8 +22,16 @@ class HomeModule extends Module {
 
   @override
   void routes(RouteManager r) {
-    r.child(HomeNomeRotas.inicial, child: (context) => const HomePage());
+    r.child(
+      HomeNomeRotas.inicial,
+      child: (context) => const HomePage(),
+      transition: TransitionType.noTransition,
+    );
     // r.module("${HomeNomeRotas.inicial}${ConfiguracoesNomeRotas.modulo}", module: ConfiguracoesModule());
-    r.module("${HomeNomeRotas.inicial}${NovaTransacaoNomeRotas.modulo}", module: NovaTransacaoModule());
+    r.module(
+      "${HomeNomeRotas.inicial}${NovaTransacaoNomeRotas.modulo}",
+      module: NovaTransacaoModule(),
+      transition: TransitionType.noTransition,
+    );
   }
 }

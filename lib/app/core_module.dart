@@ -15,6 +15,9 @@ import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:neo_financyuai/app/utils/theme_manager.dart';
 import 'package:neo_financyuai/app/viewmodel/home/home_viewmodel.dart';
 import 'package:neo_financyuai/app/viewmodel/nova_transacao/nova_transacao_viewmodel.dart';
+import 'package:neo_financyuai/app/viewmodel/settings/settings_viewmodel.dart';
+import 'package:neo_financyuai/app/repository/orcamento_repository/orcamento_repository.dart';
+import 'package:neo_financyuai/app/viewmodel/orcamento/orcamento_viewmodel.dart';
 
 /// Módulo central da aplicação.
 /// 
@@ -53,5 +56,10 @@ class CoreModule extends Module {
     // ViewModels
     i.addSingleton(HomeViewmodel.new);
     i.addLazySingleton(NovaTransacaoViewmodel.new);
+    // Tornamos SettingsViewmodel global para ser acessível por quaisquer módulos
+    i.addLazySingleton<SettingsViewmodel>(SettingsViewmodel.new);
+    // Tornamos também o orçamento global para uso dentro do TabsShell
+    i.addLazySingleton<OrcamentoRepository>(OrcamentoRepository.new);
+    i.addLazySingleton<OrcamentoViewmodel>(OrcamentoViewmodel.new);
   }
 }
