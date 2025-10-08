@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:neo_financyuai/app/utils/app_theme_helper.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
@@ -143,6 +144,10 @@ class _ChatIADialogState extends State<ChatIADialog> {
 
     final auth = AuthService();
     final uid = auth.userId ?? 'anonymous';
+    final idToken = await auth.getIdToken();
+    if (kDebugMode && idToken != null) {
+      debugPrint('🔐 Firebase ID token (dialog): $idToken');
+    }
     final sid = _sessionId ?? (await _chatRepo.getOrCreateSession(uid)).id;
     _sessionId = sid;
     final body = {
@@ -153,6 +158,9 @@ class _ChatIADialogState extends State<ChatIADialog> {
       'userName': auth.userName ?? 'Usuário',
       'dataAtual': DateTime.now().toIso8601String(),
     };
+    if (idToken != null) {
+      body['idToken'] = idToken;
+    }
 
     try {
       final uri = _buildN8nUri();
@@ -177,6 +185,11 @@ class _ChatIADialogState extends State<ChatIADialog> {
           reply = resp.body;
         }
         _addMessage(reply, isUser: false);
+      } else if ((resp.statusCode == 401 || resp.statusCode == 403) && idToken == null) {
+        _addMessage(
+          'Sua sessão expirou. Faça login novamente para liberar suas transações para a IA.',
+          isUser: false,
+        );
       } else {
         _addMessage(
           'Erro ${resp.statusCode}: não foi possível obter resposta da IA.',

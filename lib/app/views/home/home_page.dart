@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:neo_financyuai/app/database/local_storage/local_storage.dart';
@@ -17,8 +16,6 @@ import 'package:neo_financyuai/app/widgets/bottom_navigation_bat.dart';
 import 'package:neo_financyuai/app/widgets/draggable_chat_bubble.dart';
 import 'package:neo_financyuai/app/widgets/chat_ia_dialog.dart';
 import 'package:neo_financyuai/app/service/category_icon_service.dart';
-import 'package:neo_financyuai/app/service/notification_service.dart';
-import 'package:neo_financyuai/app/service/ai_debug_service.dart';
 import 'package:neo_financyuai/app/utils/toastification_utils.dart';
 
 class HomePage extends StatefulWidget {
@@ -1350,7 +1347,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final Map<String, List<MovimentacaoModel>> groupedByDate = {};
 
   for (final transaction in list) {
-      // Formatar o dia da semana sem "-feira" e com primeira letra maiúscula
       String dayName = DateFormat(
         'EEEE',
         'pt_BR',
@@ -1484,85 +1480,85 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         _showFilterModal(context);
                       },
                     ),
-                    if (kDebugMode)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  await NotificationService()
-                                      .sendTestNotification();
-                                },
-                                icon: const Icon(
-                                  Icons.notifications_active_outlined,
-                                ),
-                                label: const Text('Testar notificação'),
-                                style: ElevatedButton.styleFrom(
-                                  elevation: 0,
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                              ),
-                              // Debug IA: Rodar agora
-                              ElevatedButton.icon(
-                                onPressed: () async {
-                                  await AiDebugService().runAllNow();
-                                  if (!context.mounted) return;
-                                  ToastificationUtils.info(
-                                    title:
-                                        'IA executada agora (rotinas, feriados, previsão)',
-                                    context: context,
-                                  );
-                                },
-                                icon: const Icon(Icons.play_circle_outline),
-                                label: const Text('Rodar IA agora'),
-                                style: ElevatedButton.styleFrom(
-                                  elevation: 0,
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                              ),
-                              // Debug IA: Reset flags
-                              OutlinedButton.icon(
-                                onPressed: () async {
-                                  final removed =
-                                      await AiDebugService().resetIaFlags();
-                                  if (!context.mounted) return;
-                                  ToastificationUtils.info(
-                                    title: 'Flags de IA limpas: $removed',
-                                    context: context,
-                                  );
-                                },
-                                icon: const Icon(
-                                  Icons.cleaning_services_outlined,
-                                ),
-                                label: const Text('Resetar flags IA'),
-                                style: OutlinedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                    //if (kDebugMode)
+                      // Padding(
+                      //   padding: const EdgeInsets.symmetric(
+                      //     horizontal: 16,
+                      //     vertical: 8,
+                      //   ),
+                      //   child: Align(
+                      //     alignment: Alignment.centerRight,
+                      //     child: Wrap(
+                      //       spacing: 8,
+                      //       runSpacing: 8,
+                      //       children: [
+                      //         ElevatedButton.icon(
+                      //           onPressed: () async {
+                      //             await NotificationService()
+                      //                 .sendTestNotification();
+                      //           },
+                      //           icon: const Icon(
+                      //             Icons.notifications_active_outlined,
+                      //           ),
+                      //           label: const Text('Testar notificação'),
+                      //           style: ElevatedButton.styleFrom(
+                      //             elevation: 0,
+                      //             visualDensity: VisualDensity.compact,
+                      //             padding: const EdgeInsets.symmetric(
+                      //               horizontal: 12,
+                      //               vertical: 8,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //         // Debug IA: Rodar agora
+                      //         ElevatedButton.icon(
+                      //           onPressed: () async {
+                      //             await AiDebugService().runAllNow();
+                      //             if (!context.mounted) return;
+                      //             ToastificationUtils.info(
+                      //               title:
+                      //                   'IA executada agora (rotinas, feriados, previsão)',
+                      //               context: context,
+                      //             );
+                      //           },
+                      //           icon: const Icon(Icons.play_circle_outline),
+                      //           label: const Text('Rodar IA agora'),
+                      //           style: ElevatedButton.styleFrom(
+                      //             elevation: 0,
+                      //             visualDensity: VisualDensity.compact,
+                      //             padding: const EdgeInsets.symmetric(
+                      //               horizontal: 12,
+                      //               vertical: 8,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //         // Debug IA: Reset flags
+                      //         OutlinedButton.icon(
+                      //           onPressed: () async {
+                      //             final removed =
+                      //                 await AiDebugService().resetIaFlags();
+                      //             if (!context.mounted) return;
+                      //             ToastificationUtils.info(
+                      //               title: 'Flags de IA limpas: $removed',
+                      //               context: context,
+                      //             );
+                      //           },
+                      //           icon: const Icon(
+                      //             Icons.cleaning_services_outlined,
+                      //           ),
+                      //           label: const Text('Resetar flags IA'),
+                      //           style: OutlinedButton.styleFrom(
+                      //             visualDensity: VisualDensity.compact,
+                      //             padding: const EdgeInsets.symmetric(
+                      //               horizontal: 12,
+                      //               vertical: 8,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //       ],
+                      //     ),
+                      //   ),
+                      // ),
                     barraDePesquisa(helper),
                   ],
                 ),
@@ -1617,10 +1613,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             ],
                           );
                         }
-                        // O problema está no _buildTransactionsList: o primeiro header de data tem padding vertical de 16.
-                        // Para reduzir o espaço entre a barra de busca e a primeira transação, diminua o padding do primeiro header.
-                        // Solução: Adicione um parâmetro para o primeiro header ou ajuste o _buildTransactionsList.
-                        // Aqui, vamos ajustar o padding do primeiro header diretamente.
                         final transactionsList = _buildTransactionsList();
                         return transactionsList;
                       } else {
@@ -1636,8 +1628,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           FutureBuilder<bool>(
             future: _shouldShowChatBubble(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done)
+              if (snapshot.connectionState != ConnectionState.done) {
                 return const SizedBox.shrink();
+              }
               if (snapshot.data == false) return const SizedBox.shrink();
               return DraggableChatBubble(onTap: _openChatIA);
             },
@@ -2006,88 +1999,99 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: iconBg,
-                        child: Icon(
-                          CategoryIconService.getIconData(
-                            viewmodel.categoria
-                                .firstWhere(
-                                  (e) => movimentacao.idCategoria == e.id,
-                                  orElse:
-                                      () => CategoriaModel(
-                                        id: 0,
-                                        nome: 'Categoria não encontrada',
-                                        icone: 'category',
-                                      ),
-                                )
-                                .icone,
+                  // Left side (icon + title/category) takes remaining width
+                  Expanded(
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: iconBg,
+                          child: Icon(
+                            CategoryIconService.getIconData(
+                              viewmodel.categoria
+                                  .firstWhere(
+                                    (e) => movimentacao.idCategoria == e.id,
+                                    orElse: () => CategoriaModel(
+                                      id: 0,
+                                      nome: 'Categoria não encontrada',
+                                      icone: 'category',
+                                    ),
+                                  )
+                                  .icone,
+                            ),
+                            color: helper.colorScheme.onPrimary,
+                            size: 22,
                           ),
-                          color: helper.colorScheme.onPrimary,
-                          size: 22,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            movimentacao.nome,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: helper.onSurfaceColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            viewmodel.categoria
-                                .firstWhere(
-                                  (e) => movimentacao.idCategoria == e.id,
-                                  orElse:
-                                      () => CategoriaModel(
-                                        id: 0,
-                                        nome: 'Categoria não encontrada',
-                                      ),
-                                )
-                                .nome,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 12,
-                              color: helper.onSurfaceColor.withOpacity(0.7),
-                            ),
-                          ),
-                          if (movimentacao.idCategoria == 9)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: helper.colorScheme.primary.withOpacity(
-                                  0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Sugestão de IA',
+                        const SizedBox(width: 12),
+                        // Make the text column flexible so long names ellipsize
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                movimentacao.nome,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
-                                  fontSize: 10,
-                                  color: helper.colorScheme.primary,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: helper.onSurfaceColor,
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ],
+                              const SizedBox(height: 2),
+                              Text(
+                                viewmodel.categoria
+                                    .firstWhere(
+                                      (e) => movimentacao.idCategoria == e.id,
+                                      orElse: () => CategoriaModel(
+                                        id: 0,
+                                        nome: 'Categoria não encontrada',
+                                      ),
+                                    )
+                                    .nome,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color:
+                                      helper.onSurfaceColor.withOpacity(0.7),
+                                ),
+                              ),
+                              if (movimentacao.idCategoria == 9)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        helper.colorScheme.primary.withOpacity(
+                                      0.1,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Sugestão de IA',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 10,
+                                      color: helper.colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  // Ensure a small gap between title area and value
+                  const SizedBox(width: 8),
                   Text(
                     viewmodel.canSeeValue
                         ? NumberFormat.currency(

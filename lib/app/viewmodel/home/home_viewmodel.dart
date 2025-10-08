@@ -113,9 +113,23 @@ abstract class HomeViewmodelBase with Store {
   Future<void> initializeServices() async {
   await _syncService.initialize();
     await _notificationService.initialize();
-    await carregarCategorias();
+    final userId = _authService.userId;
+    if (userId != null) {
+      try {
+        if (kDebugMode) {
+          debugPrint('🔄 Sincronizando movimentações do Firebase para o usuário $userId');
+        }
+        await _syncService.syncOnLogin(userId);
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('⚠️ Falha ao sincronizar dados iniciais com o Firebase: $e');
+        }
+      }
+    } else if (kDebugMode) {
+      debugPrint('⚠️ initializeServices chamado sem usuário autenticado — pulando sincronização');
+    }
 
-    // Sincronização desativada: nenhuma ação pós-login
+    await carregarCategorias();
 
     await carregarMovimentacoes(); 
     await carregarSaldo(_mesAtual);
