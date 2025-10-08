@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:neo_financyuai/app/service/ai_routine_service.dart';
 import 'package:neo_financyuai/app/service/ai_holiday_service.dart';
 import 'package:neo_financyuai/app/service/ai_balance_forecast_service.dart';
+import 'package:neo_financyuai/app/service/auth_service.dart';
+import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
 
 /// Serviço responsável por gerenciar tarefas em segundo plano
 /// 
@@ -68,6 +70,32 @@ class BackgroundTaskService {
         print('⚠️ Falha ao agendar tarefa da IA: $e');
       }
     }
+
+    // Agenda sincronização silenciosa: processar fila quando online
+    try {
+      await Workmanager().registerPeriodicTask(
+        syncTask,
+        syncTask,
+        frequency: const Duration(minutes: 15),
+        initialDelay: const Duration(minutes: 5),
+        existingWorkPolicy: ExistingWorkPolicy.keep,
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+        ),
+        backoffPolicy: BackoffPolicy.exponential,
+        backoffPolicyDelay: const Duration(minutes: 10),
+        tag: 'background_sync',
+      );
+      if (kDebugMode) {
+        print('🔁 Workmanager: sincronização periódica agendada a cada 15min');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Falha ao agendar sync periódico: $e');
+      }
+    }
   }
 
   /// Calcula o delay até a próxima manhã (hora específica do dia seguinte, se já passou hoje)
@@ -110,6 +138,12 @@ void callbackDispatcher() {
           await AiBalanceForecastService().runDailyForecast();
           return Future.value(true);
         case BackgroundTaskService.syncTask:
+          // Sincroniza a fila se usuário estiver autenticado
+          final uid = AuthService().userId;
+          if (uid != null) {
+            await FirebaseSyncService().processQueue(uid);
+          }
+          return Future.value(true);
         case BackgroundTaskService.reminderTask:
         case BackgroundTaskService.dailyReportTask:
           // Tarefas antigas permanecem desativadas; não executar

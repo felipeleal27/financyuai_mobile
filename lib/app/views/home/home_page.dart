@@ -894,9 +894,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Inicializa locales para português brasileiro
     initializeDateFormatting('pt_BR', null);
-    // Adiciona observer para detectar mudanças no ciclo de vida da app
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -922,11 +920,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     initializeDateFormatting('pt_BR', null);
 
     if (!viewmodel.carregou) {
-      await viewmodel.carregarCategorias().then((_) async {
-        await viewmodel.carregarMovimentacoes();
-        await viewmodel.initializeServices();
-        viewmodel.setCarregou(true);
-      });
+      await viewmodel.carregarCategorias();
+      await viewmodel.carregarMovimentacoes();
+      viewmodel.setCarregou(true);
+      Future.microtask(() => viewmodel.initializeServices());
     }
   }
 
@@ -1144,11 +1141,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           if (date != null) vm.setFilterPeriodo(inicio: date);
                         },
                         icon: const Icon(Icons.date_range),
-                        label: Text('Início', style: TextStyle(color: helper.onSurfaceColor)),
+                        label: Text(
+                          'Início',
+                          style: TextStyle(color: helper.onSurfaceColor),
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: helper.colorScheme.primary,
-                          side: BorderSide(color: helper.onSurfaceColor.withOpacity(0.2)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(
+                            color: helper.onSurfaceColor.withOpacity(0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -1165,11 +1169,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           if (date != null) vm.setFilterPeriodo(fim: date);
                         },
                         icon: const Icon(Icons.event),
-                        label: Text('Fim', style: TextStyle(color: helper.onSurfaceColor)),
+                        label: Text(
+                          'Fim',
+                          style: TextStyle(color: helper.onSurfaceColor),
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: helper.colorScheme.primary,
-                          side: BorderSide(color: helper.onSurfaceColor.withOpacity(0.2)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(
+                            color: helper.onSurfaceColor.withOpacity(0.2),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -1186,105 +1197,135 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     Expanded(
                       child: Text(
                         'Limitar ao mês atual (AppBar)',
-                        style: TextStyle(color: helper.onSurfaceColor.withOpacity(0.9)),
+                        style: TextStyle(
+                          color: helper.onSurfaceColor.withOpacity(0.9),
+                        ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
                 // Filtros por tipo
-                _sectionHeader(helper, Icons.swap_vert_circle_outlined, 'Tipo de Transação'),
+                _sectionHeader(
+                  helper,
+                  Icons.swap_vert_circle_outlined,
+                  'Tipo de Transação',
+                ),
                 const SizedBox(height: 10),
-                Observer(builder: (_) {
-                  return Wrap(
-                    spacing: 8,
-                    children: [
-                      _choiceChip(
-                        helper,
-                        label: 'Todas',
-                        selected: vm.filterIsSaida == null,
-                        onSelected: (_) => vm.setFilterTipo(null),
-                      ),
-                      _choiceChip(
-                        helper,
-                        label: 'Receitas',
-                        selected: vm.filterIsSaida == false,
-                        onSelected: (_) => vm.setFilterTipo(false),
-                      ),
-                      _choiceChip(
-                        helper,
-                        label: 'Despesas',
-                        selected: vm.filterIsSaida == true,
-                        onSelected: (_) => vm.setFilterTipo(true),
-                      ),
-                    ],
-                  );
-                }),
+                Observer(
+                  builder: (_) {
+                    return Wrap(
+                      spacing: 8,
+                      children: [
+                        _choiceChip(
+                          helper,
+                          label: 'Todas',
+                          selected: vm.filterIsSaida == null,
+                          onSelected: (_) => vm.setFilterTipo(null),
+                        ),
+                        _choiceChip(
+                          helper,
+                          label: 'Receitas',
+                          selected: vm.filterIsSaida == false,
+                          onSelected: (_) => vm.setFilterTipo(false),
+                        ),
+                        _choiceChip(
+                          helper,
+                          label: 'Despesas',
+                          selected: vm.filterIsSaida == true,
+                          onSelected: (_) => vm.setFilterTipo(true),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 const SizedBox(height: 16),
                 // Filtro por categoria
                 _sectionHeader(helper, Icons.category_outlined, 'Categoria'),
                 const SizedBox(height: 10),
-                Observer(builder: (_) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int?>(
-                          value: vm.filterCategoryId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(hintText: 'Selecione uma categoria'),
-                          items: [
-                            const DropdownMenuItem<int?>(
-                              value: null,
-                              child: Text('Todas as categorias'),
+                Observer(
+                  builder: (_) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int?>(
+                            value: vm.filterCategoryId,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              hintText: 'Selecione uma categoria',
                             ),
-                            ...vm.categoria.map((c) => DropdownMenuItem<int?>(
+                            items: [
+                              const DropdownMenuItem<int?>(
+                                value: null,
+                                child: Text('Todas as categorias'),
+                              ),
+                              ...vm.categoria.map(
+                                (c) => DropdownMenuItem<int?>(
                                   value: c.id,
                                   child: Text(c.nome),
-                                )),
-                          ],
-                          onChanged: (val) => vm.setFilterCategoria(val),
+                                ),
+                              ),
+                            ],
+                            onChanged: (val) => vm.setFilterCategoria(val),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        tooltip: 'Limpar categoria',
-                        onPressed: () => vm.setFilterCategoria(null),
-                        icon: const Icon(Icons.clear),
-                      ),
-                    ],
-                  );
-                }),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'Limpar categoria',
+                          onPressed: () => vm.setFilterCategoria(null),
+                          icon: const Icon(Icons.clear),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 const SizedBox(height: 16),
                 // Filtros por valor
                 _sectionHeader(helper, Icons.attach_money, 'Faixa de Valor'),
                 const SizedBox(height: 10),
-                Observer(builder: (_) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'Mínimo'),
-                          onSubmitted: (v) {
-                            final min = double.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
-                            vm.setFilterValor(min: min, max: vm.maxValueFilter);
-                          },
+                Observer(
+                  builder: (_) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: 'Mínimo',
+                            ),
+                            onSubmitted: (v) {
+                              final min = double.tryParse(
+                                v.replaceAll('.', '').replaceAll(',', '.'),
+                              );
+                              vm.setFilterValor(
+                                min: min,
+                                max: vm.maxValueFilter,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextField(
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'Máximo'),
-                          onSubmitted: (v) {
-                            final max = double.tryParse(v.replaceAll('.', '').replaceAll(',', '.'));
-                            vm.setFilterValor(min: vm.minValueFilter, max: max);
-                          },
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              hintText: 'Máximo',
+                            ),
+                            onSubmitted: (v) {
+                              final max = double.tryParse(
+                                v.replaceAll('.', '').replaceAll(',', '.'),
+                              );
+                              vm.setFilterValor(
+                                min: vm.minValueFilter,
+                                max: max,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }),
+                      ],
+                    );
+                  },
+                ),
                 const SizedBox(height: 32),
                 // Botões de ação
                 Row(
@@ -1346,7 +1387,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // 1. Agrupa as transações por data (sem ordenar ainda)
     final Map<String, List<MovimentacaoModel>> groupedByDate = {};
 
-  for (final transaction in list) {
+    for (final transaction in list) {
       String dayName = DateFormat(
         'EEEE',
         'pt_BR',
@@ -1481,84 +1522,84 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       },
                     ),
                     //if (kDebugMode)
-                      // Padding(
-                      //   padding: const EdgeInsets.symmetric(
-                      //     horizontal: 16,
-                      //     vertical: 8,
-                      //   ),
-                      //   child: Align(
-                      //     alignment: Alignment.centerRight,
-                      //     child: Wrap(
-                      //       spacing: 8,
-                      //       runSpacing: 8,
-                      //       children: [
-                      //         ElevatedButton.icon(
-                      //           onPressed: () async {
-                      //             await NotificationService()
-                      //                 .sendTestNotification();
-                      //           },
-                      //           icon: const Icon(
-                      //             Icons.notifications_active_outlined,
-                      //           ),
-                      //           label: const Text('Testar notificação'),
-                      //           style: ElevatedButton.styleFrom(
-                      //             elevation: 0,
-                      //             visualDensity: VisualDensity.compact,
-                      //             padding: const EdgeInsets.symmetric(
-                      //               horizontal: 12,
-                      //               vertical: 8,
-                      //             ),
-                      //           ),
-                      //         ),
-                      //         // Debug IA: Rodar agora
-                      //         ElevatedButton.icon(
-                      //           onPressed: () async {
-                      //             await AiDebugService().runAllNow();
-                      //             if (!context.mounted) return;
-                      //             ToastificationUtils.info(
-                      //               title:
-                      //                   'IA executada agora (rotinas, feriados, previsão)',
-                      //               context: context,
-                      //             );
-                      //           },
-                      //           icon: const Icon(Icons.play_circle_outline),
-                      //           label: const Text('Rodar IA agora'),
-                      //           style: ElevatedButton.styleFrom(
-                      //             elevation: 0,
-                      //             visualDensity: VisualDensity.compact,
-                      //             padding: const EdgeInsets.symmetric(
-                      //               horizontal: 12,
-                      //               vertical: 8,
-                      //             ),
-                      //           ),
-                      //         ),
-                      //         // Debug IA: Reset flags
-                      //         OutlinedButton.icon(
-                      //           onPressed: () async {
-                      //             final removed =
-                      //                 await AiDebugService().resetIaFlags();
-                      //             if (!context.mounted) return;
-                      //             ToastificationUtils.info(
-                      //               title: 'Flags de IA limpas: $removed',
-                      //               context: context,
-                      //             );
-                      //           },
-                      //           icon: const Icon(
-                      //             Icons.cleaning_services_outlined,
-                      //           ),
-                      //           label: const Text('Resetar flags IA'),
-                      //           style: OutlinedButton.styleFrom(
-                      //             visualDensity: VisualDensity.compact,
-                      //             padding: const EdgeInsets.symmetric(
-                      //               horizontal: 12,
-                      //               vertical: 8,
-                      //             ),
-                      //           ),
-                      //         ),
-                      //       ],
-                      //     ),
-                      //   ),
-                      // ),
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(
+                    //     horizontal: 16,
+                    //     vertical: 8,
+                    //   ),
+                    //   child: Align(
+                    //     alignment: Alignment.centerRight,
+                    //     child: Wrap(
+                    //       spacing: 8,
+                    //       runSpacing: 8,
+                    //       children: [
+                    //         ElevatedButton.icon(
+                    //           onPressed: () async {
+                    //             await NotificationService()
+                    //                 .sendTestNotification();
+                    //           },
+                    //           icon: const Icon(
+                    //             Icons.notifications_active_outlined,
+                    //           ),
+                    //           label: const Text('Testar notificação'),
+                    //           style: ElevatedButton.styleFrom(
+                    //             elevation: 0,
+                    //             visualDensity: VisualDensity.compact,
+                    //             padding: const EdgeInsets.symmetric(
+                    //               horizontal: 12,
+                    //               vertical: 8,
+                    //             ),
+                    //           ),
+                    //         ),
+                    //         // Debug IA: Rodar agora
+                    //         ElevatedButton.icon(
+                    //           onPressed: () async {
+                    //             await AiDebugService().runAllNow();
+                    //             if (!context.mounted) return;
+                    //             ToastificationUtils.info(
+                    //               title:
+                    //                   'IA executada agora (rotinas, feriados, previsão)',
+                    //               context: context,
+                    //             );
+                    //           },
+                    //           icon: const Icon(Icons.play_circle_outline),
+                    //           label: const Text('Rodar IA agora'),
+                    //           style: ElevatedButton.styleFrom(
+                    //             elevation: 0,
+                    //             visualDensity: VisualDensity.compact,
+                    //             padding: const EdgeInsets.symmetric(
+                    //               horizontal: 12,
+                    //               vertical: 8,
+                    //             ),
+                    //           ),
+                    //         ),
+                    //         // Debug IA: Reset flags
+                    //         OutlinedButton.icon(
+                    //           onPressed: () async {
+                    //             final removed =
+                    //                 await AiDebugService().resetIaFlags();
+                    //             if (!context.mounted) return;
+                    //             ToastificationUtils.info(
+                    //               title: 'Flags de IA limpas: $removed',
+                    //               context: context,
+                    //             );
+                    //           },
+                    //           icon: const Icon(
+                    //             Icons.cleaning_services_outlined,
+                    //           ),
+                    //           label: const Text('Resetar flags IA'),
+                    //           style: OutlinedButton.styleFrom(
+                    //             visualDensity: VisualDensity.compact,
+                    //             padding: const EdgeInsets.symmetric(
+                    //               horizontal: 12,
+                    //               vertical: 8,
+                    //             ),
+                    //           ),
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                     barraDePesquisa(helper),
                   ],
                 ),
@@ -1637,28 +1678,31 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      floatingActionButton: widget.embedded
-          ? null
-          : SizedBox(
-        width: 64,
-        height: 64,
-        child: FloatingActionButton(
-          onPressed: () {
-            showDialogDespesaReceita(context);
-          },
-          backgroundColor: helper.colorScheme.primary,
-          foregroundColor: helper.colorScheme.onPrimary,
-          elevation: helper.brightness == Brightness.light ? 6 : 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(32),
-          ),
-          child: const Icon(Icons.add, size: 28),
-        ),
-      ),
+      floatingActionButton:
+          widget.embedded
+              ? null
+              : SizedBox(
+                width: 64,
+                height: 64,
+                child: FloatingActionButton(
+                  onPressed: () {
+                    showDialogDespesaReceita(context);
+                  },
+                  backgroundColor: helper.colorScheme.primary,
+                  foregroundColor: helper.colorScheme.onPrimary,
+                  elevation: helper.brightness == Brightness.light ? 6 : 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  child: const Icon(Icons.add, size: 28),
+                ),
+              ),
       floatingActionButtonLocation:
           widget.embedded ? null : FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar:
-          widget.embedded ? null : const CustomBottomNavigationBar(currentIndex: 0),
+          widget.embedded
+              ? null
+              : const CustomBottomNavigationBar(currentIndex: 0),
     );
   }
 
@@ -1749,7 +1793,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _choiceChip(AppThemeHelper helper, {required String label, required bool selected, required ValueChanged<bool> onSelected}) {
+  Widget _choiceChip(
+    AppThemeHelper helper, {
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) {
     return ChoiceChip(
       label: Text(label),
       selected: selected,
@@ -1761,9 +1810,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         fontWeight: FontWeight.w600,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      backgroundColor: helper.brightness == Brightness.light
-          ? const Color(0xFFEFF3F7)
-          : helper.colorScheme.onSurface.withOpacity(0.06),
+      backgroundColor:
+          helper.brightness == Brightness.light
+              ? const Color(0xFFEFF3F7)
+              : helper.colorScheme.onSurface.withOpacity(0.06),
     );
   }
 
@@ -2012,11 +2062,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               viewmodel.categoria
                                   .firstWhere(
                                     (e) => movimentacao.idCategoria == e.id,
-                                    orElse: () => CategoriaModel(
-                                      id: 0,
-                                      nome: 'Categoria não encontrada',
-                                      icone: 'category',
-                                    ),
+                                    orElse:
+                                        () => CategoriaModel(
+                                          id: 0,
+                                          nome: 'Categoria não encontrada',
+                                          icone: 'category',
+                                        ),
                                   )
                                   .icone,
                             ),
@@ -2046,10 +2097,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 viewmodel.categoria
                                     .firstWhere(
                                       (e) => movimentacao.idCategoria == e.id,
-                                      orElse: () => CategoriaModel(
-                                        id: 0,
-                                        nome: 'Categoria não encontrada',
-                                      ),
+                                      orElse:
+                                          () => CategoriaModel(
+                                            id: 0,
+                                            nome: 'Categoria não encontrada',
+                                          ),
                                     )
                                     .nome,
                                 maxLines: 1,
@@ -2057,8 +2109,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontSize: 12,
-                                  color:
-                                      helper.onSurfaceColor.withOpacity(0.7),
+                                  color: helper.onSurfaceColor.withOpacity(0.7),
                                 ),
                               ),
                               if (movimentacao.idCategoria == 9)
@@ -2069,10 +2120,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color:
-                                        helper.colorScheme.primary.withOpacity(
-                                      0.1,
-                                    ),
+                                    color: helper.colorScheme.primary
+                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(

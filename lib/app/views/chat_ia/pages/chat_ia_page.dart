@@ -180,7 +180,7 @@ class _ChatIAPageState extends State<ChatIAPage> {
 
   Uri _buildN8nUri() {
     final base = (Environments.param('N8N_BASE_URL') ?? '').trim();
-    final path = (Environments.param('N8N_WEBHOOK_PATH') ?? '/webhook-test/ai/quest').trim();
+    final path = (Environments.param('N8N_WEBHOOK_PATH') ?? '/webhook/ai/quest').trim();
     String baseUrl;
     if (base.isNotEmpty) {
       baseUrl = base;

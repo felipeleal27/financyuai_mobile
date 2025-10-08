@@ -8,6 +8,7 @@ import 'package:neo_financyuai/app/repository/home_repository/home_repository.da
 import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Implementação do repositório de dados da tela principal
 /// Gerencia movimentações, categorias e sincronização com Firebase
@@ -17,7 +18,14 @@ class HomeRepositoryImpl extends HomeRepository {
   Future<List<MovimentacaoModel>> getMovimentacoesTodas() async {
     try {
       final db = await DB.instance.database;
-      final userId = _authService.userId;
+      var userId = _authService.userId;
+      // Fallback offline: tenta último UID persistido
+      if (userId == null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          userId = prefs.getString('last_user_uid');
+        } catch (_) {}
+      }
       if (userId == null) {
         if (kDebugMode) {
           print('❌ getMovimentacoesTodas: userId nulo, retornando lista vazia');
@@ -150,7 +158,13 @@ class HomeRepositoryImpl extends HomeRepository {
   try {
       final db = await DB.instance.database;
       final anoSelecionado = ano ?? DateTime.now().year;
-      final userId = _authService.userId;
+      var userId = _authService.userId;
+      if (userId == null) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          userId = prefs.getString('last_user_uid');
+        } catch (_) {}
+      }
 
       if (userId == null) {
         if (kDebugMode) {
