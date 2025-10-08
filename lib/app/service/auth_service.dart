@@ -48,6 +48,24 @@ class AuthService {
   /// Verifica se o usuário está logado
   bool get isAuthenticated => _auth.currentUser != null;
 
+  /// Recupera o ID token JWT atual do usuário autenticado, quando existir.
+  ///
+  /// Retorna `null` quando não há usuário logado ou caso a obtenção falhe.
+  Future<String?> getIdToken({bool forceRefresh = false}) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return null;
+    }
+    try {
+      return await user.getIdToken(forceRefresh);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Erro ao obter ID token: $e');
+      }
+      return null;
+    }
+  }
+
   /// Login com Google
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -274,7 +292,6 @@ class AuthService {
         print('🚀 Tentando login com GitHub...');
       }
       
-      // TODO: Implementar GitHub OAuth
       // Isso requer configuração adicional no Firebase Console
       // e implementação do GitHub OAuth provider
       
@@ -294,7 +311,6 @@ class AuthService {
         print('🚀 Tentando login com Microsoft...');
       }
       
-      // TODO: Implementar Microsoft OAuth
       // Isso requer configuração adicional no Firebase Console
       // e implementação do Microsoft OAuth provider
       

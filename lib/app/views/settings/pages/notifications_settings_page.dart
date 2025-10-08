@@ -84,8 +84,9 @@ class _NotificationsSettingsPageState extends State<NotificationsSettingsPage> {
                               if (!hasPerm) {
                                 final granted =
                                     await _notifier.requestSystemPermission();
-                                if (!granted)
+                                if (!granted) {
                                   return; // Não liga se o usuário não concedeu
+                                }
                               }
                             }
                             _settingsVm.setNotificationsEnabled(v);

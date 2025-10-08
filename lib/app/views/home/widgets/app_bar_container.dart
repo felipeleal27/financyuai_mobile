@@ -82,8 +82,8 @@ class _AppBarContainerState extends State<AppBarContainer> {
     });
   }
 
-  String _formatarSaldo(double valor) {
-    if (!_mostrarSaldo) return '• • • • •';
+  String _formatarSaldo(double valor, {bool forceVisible = false}) {
+    if (!forceVisible && !_mostrarSaldo) return '• • • • •';
 
     final formato = NumberFormat.currency(
       locale: 'pt_BR',
@@ -261,6 +261,7 @@ class _AppBarContainerState extends State<AppBarContainer> {
                 const SizedBox(width: 20),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
+                  transitionBuilder: _fadeSlideTransition,
                   child: Text(
                     _formatarMes(_mesAtual),
                     key: ValueKey(_mesAtual.month),
@@ -314,24 +315,40 @@ class _AppBarContainerState extends State<AppBarContainer> {
                 //     :
                 Observer(
                   builder: (_) {
+                    final saldoAtual = viewmodelHome.saldoAtual;
+                    final textStyle = TextStyle(
+                      color: widget.helper.onSurfaceColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 32,
+                      fontFamily: 'Poppins',
+                      letterSpacing: 1.2,
+                    );
+
                     return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 400),
-                      child: Text(
-                        _formatarSaldo(viewmodelHome.saldoAtual),
-                        key: ValueKey('${viewmodelHome.saldoAtual}_$_mostrarSaldo'),
-                        style: TextStyle(
-                          color: widget.helper.onSurfaceColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 32,
-                          fontFamily: 'Poppins',
-                          letterSpacing: 1.2,
-                        ),
-                      ),
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: _fadeSlideTransition,
+                      child:
+                          _mostrarSaldo
+                              ? _SaldoPulseText(
+                                  key: const ValueKey('saldo_visivel'),
+                                  saldo: saldoAtual,
+                                  formatter: (valor) => _formatarSaldo(
+                                    valor,
+                                    forceVisible: true,
+                                  ),
+                                  style: textStyle,
+                                )
+                              : Text(
+                                  _formatarSaldo(0),
+                                  key: const ValueKey('saldo_oculto'),
+                                  style: textStyle,
+                                ),
                     );
                   },
                 ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
+                  transitionBuilder: _fadeSlideTransition,
                   child: Text(
                     _obterTextoSaldo(_mesAtual),
                     key: ValueKey(_obterTextoSaldo(_mesAtual)),
@@ -364,6 +381,115 @@ class _AppBarContainerState extends State<AppBarContainer> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _fadeSlideTransition(Widget child, Animation<double> animation) {
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOut,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.12),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _SaldoPulseText extends StatefulWidget {
+  final double saldo;
+  final TextStyle style;
+  final String Function(double) formatter;
+
+  const _SaldoPulseText({
+    super.key,
+    required this.saldo,
+    required this.style,
+    required this.formatter,
+  });
+
+  @override
+  State<_SaldoPulseText> createState() => _SaldoPulseTextState();
+}
+
+class _SaldoPulseTextState extends State<_SaldoPulseText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _opacity;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 520),
+    )..value = 1.0;
+
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+
+    _opacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.55),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.55, end: 1.0),
+        weight: 60,
+      ),
+    ]).animate(curved);
+
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.035),
+        weight: 50,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.035, end: 1.0),
+        weight: 50,
+      ),
+    ]).animate(curved);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SaldoPulseText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((widget.saldo - oldWidget.saldo).abs() > 0.009) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (_, __) {
+        return Opacity(
+          opacity: _opacity.value,
+          child: Transform.scale(
+            scale: _scale.value,
+            child: Text(
+              widget.formatter(widget.saldo),
+              style: widget.style,
+            ),
+          ),
+        );
+      },
     );
   }
 }

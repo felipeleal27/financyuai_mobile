@@ -104,28 +104,33 @@ class SaldoService {
       final userId = _authService.userId;
       if (userId == null) return 0.0;
       
-      // Obtém todas as transações do mês especificado
-      final transacoesMes = await _homeRepository.getMovimentacoes(mesLimite.month, mesLimite.year);
-      
-      double saldoAcumulado = 0.0;
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Calcula o saldo do mês especificado
-      for (final transacao in transacoesMes) {
-        if (transacao.dataMovimentacao.year == mesLimite.year &&
-            transacao.dataMovimentacao.month == mesLimite.month) {
-          saldoAcumulado += transacao.valor;
-        }
+      // Obtém todas as transações do usuário e acumula até o fim do mês limite
+      final todasTransacoes = await _homeRepository.getMovimentacoesTodas();
+
+      if (todasTransacoes.isEmpty) {
+        return 0.0;
       }
-      
-      // Salva no cache
+
+      final fimDoMes = DateTime(
+        mesLimite.year,
+        mesLimite.month + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      );
+
+      final saldoAcumulado = todasTransacoes
+          .where((transacao) => !transacao.dataMovimentacao.isAfter(fimDoMes))
+          .fold<double>(0.0, (total, transacao) => total + transacao.valor);
+
+      final prefs = await SharedPreferences.getInstance();
       final chave = _getChaveCache(mesLimite);
       await prefs.setDouble(chave, saldoAcumulado);
+
       
-      if (kDebugMode) {
-        print('🔄 Recalculado saldo acumulado para ${mesLimite.month}/${mesLimite.year}: R\$ ${saldoAcumulado.toStringAsFixed(2)}');
-      }
-      
+
       return saldoAcumulado;
     } catch (e) {
       if (kDebugMode) {
