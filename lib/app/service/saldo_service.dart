@@ -33,9 +33,16 @@ class SaldoService {
   /// Fórmula: saldoExibido = saldoAcumuladoAteMesAnterior + somaTransacoesDoMes
   Future<double> calculaSaldoExibido(DateTime mesSelecionado) async {
     try {
+      // Descobre o UID (online ou offline) para cálculo e cache
+      final uid = await _getUidWithFallback();
+      if (uid == null) {
+        if (kDebugMode) print('⚠️ Sem UID (nem fallback) para calcular saldo');
+        return 0.0;
+      }
       // 1. Obtém o saldo acumulado até o mês anterior
       final saldoAnterior  = await _getSaldoAcumuladoAteMes(
         DateTime(mesSelecionado.year, mesSelecionado.month - 1),
+        uid,
       );
       
       // 2. Soma as transações do mês selecionado
@@ -46,7 +53,7 @@ class SaldoService {
       final saldoFinal = saldoAnterior + totalMes;
       
       // 4. Atualiza o cache para o mês atual
-      await _updateCacheMensal(mesSelecionado, saldoFinal);
+      await _updateCacheMensal(mesSelecionado, saldoFinal, uid);
       
       if (kDebugMode) {
         print('💰 Saldo calculado para ${mesSelecionado.month}/${mesSelecionado.year}:');
@@ -84,9 +91,9 @@ class SaldoService {
   }
 
   /// Obtém o saldo acumulado até um mês específico
-  Future<double> _getSaldoAcumuladoAteMes(DateTime mes) async {
+  Future<double> _getSaldoAcumuladoAteMes(DateTime mes, String uid) async {
     final prefs = await SharedPreferences.getInstance();
-    final chaveCache = _getChaveCache(mes);
+    final chaveCache = _getChaveCache(mes, uid);
     
     // Verifica se existe no cache
     final saldoCache = prefs.getDouble(chaveCache);
@@ -95,15 +102,12 @@ class SaldoService {
     }
     
     // Se não existe no cache, recalcula desde o início
-    return await _recalcularSaldoAcumulado(mes);
+    return await _recalcularSaldoAcumulado(mes, uid);
   }
 
   /// Recalcula o saldo acumulado desde o início até um mês específico
-  Future<double> _recalcularSaldoAcumulado(DateTime mesLimite) async {
+  Future<double> _recalcularSaldoAcumulado(DateTime mesLimite, String uid) async {
     try {
-      final userId = _authService.userId;
-      if (userId == null) return 0.0;
-      
       // Obtém todas as transações do usuário e acumula até o fim do mês limite
       final todasTransacoes = await _homeRepository.getMovimentacoesTodas();
 
@@ -125,8 +129,8 @@ class SaldoService {
           .where((transacao) => !transacao.dataMovimentacao.isAfter(fimDoMes))
           .fold<double>(0.0, (total, transacao) => total + transacao.valor);
 
-      final prefs = await SharedPreferences.getInstance();
-      final chave = _getChaveCache(mesLimite);
+  final prefs = await SharedPreferences.getInstance();
+  final chave = _getChaveCache(mesLimite, uid);
       await prefs.setDouble(chave, saldoAcumulado);
 
       
@@ -142,9 +146,6 @@ class SaldoService {
 
   /// Obtém as transações de um mês específico
   Future<List<MovimentacaoModel>> _getTransacoesDoMes(DateTime mes) async {
-    final userId = _authService.userId;
-    if (userId == null) return [];
-    
     // Usa o método disponível no repository com ano
     final todasTransacoes = await _homeRepository.getMovimentacoes(mes.month, mes.year);
     
@@ -156,17 +157,28 @@ class SaldoService {
   }
 
   /// Atualiza o cache mensal
-  Future<void> _updateCacheMensal(DateTime mes, double saldo) async {
+  Future<void> _updateCacheMensal(DateTime mes, double saldo, String uid) async {
     final prefs = await SharedPreferences.getInstance();
-  final chave = _getChaveCache(mes);
+    final chave = _getChaveCache(mes, uid);
     await prefs.setDouble(chave, saldo);
   }
 
   /// Gera a chave do cache para um mês específico
-  String _getChaveCache(DateTime mes) {
-  final uid = _authService.userId ?? 'anon';
-  final ym = '${mes.year}-${mes.month.toString().padLeft(2, '0')}';
-  return '${uid}_$ym';
+  String _getChaveCache(DateTime mes, String uid) {
+    final ym = '${mes.year}-${mes.month.toString().padLeft(2, '0')}';
+    return 'saldo_${uid}_$ym';
+  }
+
+  /// Obtém UID atual ou o último UID persistido (para uso offline)
+  Future<String?> _getUidWithFallback() async {
+    final uid = _authService.userId;
+    if (uid != null) return uid;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('last_user_uid');
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Recalcula o cache a partir de um mês específico

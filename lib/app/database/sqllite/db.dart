@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 class DB {
   DB._();
 
-static const int _dbaseVersion = 7; // v7: adiciona chat_session e chat_message
+static const int _dbaseVersion = 8; // v8: adiciona tabela de fila de sincronização (sync_queue)
   static const String _dbaseName = 'financy.db';
 
   static final DB instance = DB._();
@@ -61,6 +61,8 @@ static const int _dbaseVersion = 7; // v7: adiciona chat_session e chat_message
   await db.execute(_tabelaChatSession);
   await db.execute(_tabelaChatMessage);
   await db.execute(_idxChatMessageSessionTs);
+    await db.execute(_tabelaSyncQueue);
+    await db.execute(_idxSyncQueueUser);
   }
 
   /// Callback para upgrade do banco
@@ -90,6 +92,12 @@ static const int _dbaseVersion = 7; // v7: adiciona chat_session e chat_message
       await db.execute(_tabelaChatSession);
       await db.execute(_tabelaChatMessage);
       await db.execute(_idxChatMessageSessionTs);
+    }
+
+    if (oldVersion < 8) {
+      // Versão 8: Fila de sincronização offline-first
+      await db.execute(_tabelaSyncQueue);
+      await db.execute(_idxSyncQueueUser);
     }
 
     //await addColumnIfNotExists(db, "resumo", "conjunto", "INTEGER");
@@ -201,5 +209,23 @@ static const String _tabelaCategoria = '''
   static const String _idxChatMessageSessionTs = '''
     CREATE INDEX IF NOT EXISTS idx_chat_message_session_ts
       ON chat_message (SessionId, Timestamp)
+  ''';
+
+  static const String _tabelaSyncQueue = '''
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      Id INTEGER PRIMARY KEY AUTOINCREMENT,
+      UserId TEXT NOT NULL,
+      Op TEXT NOT NULL,           -- 'upsert' | 'delete'
+      Entity TEXT NOT NULL,       -- por ora, 'movimentacao'
+      EntityId TEXT NOT NULL,
+      Payload TEXT,               -- JSON com dados do objeto (para upsert)
+      RetryCount INTEGER NOT NULL DEFAULT 0,
+      LastAttempt INTEGER,
+      CreatedAt INTEGER NOT NULL
+    )''';
+
+  static const String _idxSyncQueueUser = '''
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_user
+      ON sync_queue (UserId, Entity, EntityId)
   ''';
 }

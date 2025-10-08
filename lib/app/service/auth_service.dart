@@ -141,6 +141,19 @@ class AuthService {
         print('🆔 UID: ${userCredential.user?.uid}');
       }
 
+      // Persiste UID para uso em tarefas de background
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final uid = userCredential.user?.uid;
+        if (uid != null) {
+          await prefs.setString('last_user_uid', uid);
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('ℹ️ Não foi possível persistir last_user_uid: $e');
+        }
+      }
+
       if (kDebugMode) {
         print('🔐 Checando usuário após login:');
         print('   📧 Email: ${userCredential.user?.email}');
@@ -233,6 +246,7 @@ class AuthService {
       }
       try {
         final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('last_user_uid');
         await prefs.clear();
       } catch (e) {
         if (kDebugMode) {

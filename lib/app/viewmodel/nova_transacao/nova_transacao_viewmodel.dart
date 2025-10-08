@@ -297,14 +297,6 @@ abstract class NovaTransacaoViewmodelBase with Store {
           print('DEBUG: Salvando como transação única');
         }
         await _homeRepository.novaMovimentacao(movimentacao);
-        
-        if (currentUserId != null) {
-          _syncService.addMovimentacao(movimentacao, currentUserId!).catchError((error) {
-            if (kDebugMode) {
-              print('Erro na sincronização: $error');
-            }
-          });
-        }
       } else {
         // Transações recorrentes
         if (kDebugMode) {
@@ -318,14 +310,6 @@ abstract class NovaTransacaoViewmodelBase with Store {
         
         for (final transacao in transacoes) {
           await _homeRepository.novaMovimentacao(transacao);
-          
-          if (currentUserId != null) {
-            _syncService.addMovimentacao(transacao, currentUserId!).catchError((error) {
-              if (kDebugMode) {
-                print('Erro na sincronização: $error');
-              }
-            });
-          }
         }
       }
 

@@ -111,28 +111,12 @@ abstract class HomeViewmodelBase with Store {
   /// Inicializa os serviços em segundo plano
   @action
   Future<void> initializeServices() async {
-  await _syncService.initialize();
+    await _syncService.initialize();
     await _notificationService.initialize();
-    final userId = _authService.userId;
-    if (userId != null) {
-      try {
-        if (kDebugMode) {
-          debugPrint('🔄 Sincronizando movimentações do Firebase para o usuário $userId');
-        }
-        await _syncService.syncOnLogin(userId);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('⚠️ Falha ao sincronizar dados iniciais com o Firebase: $e');
-        }
-      }
-    } else if (kDebugMode) {
-      debugPrint('⚠️ initializeServices chamado sem usuário autenticado — pulando sincronização');
-    }
-
-    await carregarCategorias();
-
-    await carregarMovimentacoes(); 
-    await carregarSaldo(_mesAtual);
+    // Não bloqueia a UI com sync completo aqui; o carregarMovimentacoes já dispara sync localmente
+    try {
+      await carregarSaldo(_mesAtual);
+    } catch (_) {}
   }
 
   @action
@@ -708,8 +692,8 @@ abstract class HomeViewmodelBase with Store {
                   mov.dataMovimentacao.month == _dataSelecionada.month;
             }).toList();
 
-        setMovimentacoes(movimentacoesFiltradas);
-        await _saldoService.calculaSaldoExibido(_mesAtual);
+  setMovimentacoes(movimentacoesFiltradas);
+  await carregarSaldo(_mesAtual);
 
         if (kDebugMode) {
           print(
@@ -723,7 +707,8 @@ abstract class HomeViewmodelBase with Store {
           }
         }
 
-        // Streams e sincronizações remotas desativadas
+  // 4. Em segundo plano, sincroniza do Firebase para o SQLite e recarrega
+  unawaited(_syncFirebaseToLocalAndRefresh());
       } else {
         if (kDebugMode) {
           print(
@@ -735,6 +720,28 @@ abstract class HomeViewmodelBase with Store {
       if (kDebugMode) {
         print('❌ Erro ao carregar movimentações: $e');
         print('❌ Stack trace: $e');
+      }
+    }
+  }
+
+  Future<void> _syncFirebaseToLocalAndRefresh() async {
+    final uid = _authService.userId;
+    if (uid == null) return; // sem usuário, nada a fazer
+    try {
+      await _syncService.syncFirebaseToSQLite(uid);
+      // Recarrega do SQLite após sincronizar
+      final movimentacoesLocal = await _homeRepository.getMovimentacoes(
+        _dataSelecionada.month,
+        _dataSelecionada.year,
+      );
+      final movimentacoesFiltradas = movimentacoesLocal.where((mov) =>
+          mov.dataMovimentacao.year == _dataSelecionada.year &&
+          mov.dataMovimentacao.month == _dataSelecionada.month).toList();
+      setMovimentacoes(movimentacoesFiltradas);
+  await carregarSaldo(_mesAtual);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Falha no sync Firebase→SQLite em segundo plano: $e');
       }
     }
   }
