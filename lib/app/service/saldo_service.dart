@@ -28,44 +28,20 @@ class SaldoService {
     _authService = authService;
   }
 
-  /// Calcula o saldo exibido para um mês específico
-  /// 
-  /// Fórmula: saldoExibido = saldoAcumuladoAteMesAnterior + somaTransacoesDoMes
+  /// Calcula o saldo acumulado (previsto) até o fim do mês selecionado.
+  /// Soma todas as transações com data <= último dia do mês.
   Future<double> calculaSaldoExibido(DateTime mesSelecionado) async {
     try {
-      // Descobre o UID (online ou offline) para cálculo e cache
       final uid = await _getUidWithFallback();
       if (uid == null) {
         if (kDebugMode) print('⚠️ Sem UID (nem fallback) para calcular saldo');
         return 0.0;
       }
-      // 1. Obtém o saldo acumulado até o mês anterior
-      final saldoAnterior  = await _getSaldoAcumuladoAteMes(
-        DateTime(mesSelecionado.year, mesSelecionado.month - 1),
-        uid,
-      );
-      
-      // 2. Soma as transações do mês selecionado
-      final transacoesDoMes = await _getTransacoesDoMes(mesSelecionado);
-      final totalMes = transacoesDoMes.fold(0.0, (total, t) => total + t.valor);
-      
-      // 3. Calcula o saldo final
-      final saldoFinal = saldoAnterior + totalMes;
-      
-      // 4. Atualiza o cache para o mês atual
-      await _updateCacheMensal(mesSelecionado, saldoFinal, uid);
-      
-      if (kDebugMode) {
-        print('💰 Saldo calculado para ${mesSelecionado.month}/${mesSelecionado.year}:');
-        print('   Saldo anterior: R\$ ${saldoAnterior.toStringAsFixed(2)}');
-        print('   Total do mês: R\$ ${totalMes.toStringAsFixed(2)}');
-        print('   Saldo final: R\$ ${saldoFinal.toStringAsFixed(2)}');
-      }
-      
-      return saldoFinal;
+      final mesNormalizado = DateTime(mesSelecionado.year, mesSelecionado.month, 1);
+      return await _getSaldoAcumuladoAteMes(mesNormalizado, uid);
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Erro ao calcular saldo: $e');
+        print('❌ Erro ao calcular saldo acumulativo: $e');
       }
       return 0.0;
     }
@@ -90,52 +66,30 @@ class SaldoService {
     }
   }
 
-  /// Obtém o saldo acumulado até um mês específico
+  /// Obtém (ou calcula) o saldo acumulado até o fim do mês (inclusive)
   Future<double> _getSaldoAcumuladoAteMes(DateTime mes, String uid) async {
     final prefs = await SharedPreferences.getInstance();
     final chaveCache = _getChaveCache(mes, uid);
-    
-    // Verifica se existe no cache
-    final saldoCache = prefs.getDouble(chaveCache);
-    if (saldoCache != null) {
-      return saldoCache;
-    }
-    
-    // Se não existe no cache, recalcula desde o início
+    final cache = prefs.getDouble(chaveCache);
+    if (cache != null) return cache;
     return await _recalcularSaldoAcumulado(mes, uid);
   }
 
   /// Recalcula o saldo acumulado desde o início até um mês específico
   Future<double> _recalcularSaldoAcumulado(DateTime mesLimite, String uid) async {
     try {
-      // Obtém todas as transações do usuário e acumula até o fim do mês limite
-      final todasTransacoes = await _homeRepository.getMovimentacoesTodas();
-
-      if (todasTransacoes.isEmpty) {
-        return 0.0;
+      final todas = await _homeRepository.getMovimentacoesTodas();
+      if (todas.isEmpty) return 0.0;
+      final fimMes = DateTime(mesLimite.year, mesLimite.month + 1, 0, 23, 59, 59, 999);
+      final acumulado = todas
+          .where((t) => !t.dataMovimentacao.isAfter(fimMes))
+          .fold<double>(0.0, (tot, t) => tot + t.valor);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_getChaveCache(mesLimite, uid), acumulado);
+      if (kDebugMode) {
+        print('💾 Cache saldo acumulado ${mesLimite.month}/${mesLimite.year} = ${acumulado.toStringAsFixed(2)}');
       }
-
-      final fimDoMes = DateTime(
-        mesLimite.year,
-        mesLimite.month + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      );
-
-      final saldoAcumulado = todasTransacoes
-          .where((transacao) => !transacao.dataMovimentacao.isAfter(fimDoMes))
-          .fold<double>(0.0, (total, transacao) => total + transacao.valor);
-
-  final prefs = await SharedPreferences.getInstance();
-  final chave = _getChaveCache(mesLimite, uid);
-      await prefs.setDouble(chave, saldoAcumulado);
-
-      
-
-      return saldoAcumulado;
+      return acumulado;
     } catch (e) {
       if (kDebugMode) {
         print('❌ Erro ao recalcular saldo acumulado: $e');
@@ -156,12 +110,7 @@ class SaldoService {
     }).toList();
   }
 
-  /// Atualiza o cache mensal
-  Future<void> _updateCacheMensal(DateTime mes, double saldo, String uid) async {
-    final prefs = await SharedPreferences.getInstance();
-    final chave = _getChaveCache(mes, uid);
-    await prefs.setDouble(chave, saldo);
-  }
+  // (removido) _updateCacheMensal não é mais necessário com a estratégia cumulativa
 
   /// Gera a chave do cache para um mês específico
   String _getChaveCache(DateTime mes, String uid) {
@@ -186,24 +135,20 @@ class SaldoService {
   /// Usado quando uma transação é inserida, editada ou excluída
   Future<void> recalcularCacheAPartirDe(DateTime mesAlterado) async {
     try {
+      final inicio = DateTime(mesAlterado.year, mesAlterado.month, 1);
       final agora = DateTime.now();
-      final mesInicial = DateTime(mesAlterado.year, mesAlterado.month);
-      final mesFinal = DateTime(agora.year, agora.month);
-      
-      // Limpa o cache dos meses afetados
-      await _limparCacheAPartirDe(mesInicial);
-      
-      // Recalcula desde o mês alterado até o atual
-      for (int mes = mesInicial.month; mes <= mesFinal.month; mes++) {
-        await calculaSaldoExibido(DateTime(mesInicial.year, mes));
+      await _limparCacheAPartirDe(inicio);
+      var cursor = inicio;
+      while (!cursor.isAfter(DateTime(agora.year, agora.month, 1))) {
+        await calculaSaldoExibido(cursor);
+        cursor = DateTime(cursor.year, cursor.month + 1, 1);
       }
-      
       if (kDebugMode) {
-        print('🔄 Cache recalculado de ${mesAlterado.month}/${mesAlterado.year} até ${agora.month}/${agora.year}');
+        print('🔄 Cache acumulado recalculado desde ${inicio.month}/${inicio.year} até ${agora.month}/${agora.year}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Erro ao recalcular cache: $e');
+        print('❌ Erro ao recalcular cache acumulado: $e');
       }
     }
   }
@@ -211,25 +156,26 @@ class SaldoService {
   /// Limpa o cache a partir de um mês específico
   Future<void> _limparCacheAPartirDe(DateTime mesInicial) async {
     final prefs = await SharedPreferences.getInstance();
-  final uid = _authService.userId;
-  final keys = prefs
-    .getKeys()
-    .where((key) => key.contains('-') && (uid == null || key.startsWith('${uid}_')));
-    
+    final uid = await _getUidWithFallback();
+    if (uid == null) return; // sem UID não há cache válido para limpar
+    final prefix = 'saldo_${uid}_';
+    final keys = prefs.getKeys().where((key) => key.startsWith(prefix));
+
     for (final key in keys) {
       try {
-  final keyPart = uid != null ? key.replaceFirst('${uid}_', '') : key;
-  final parts = keyPart.split('-');
-  if (parts.length != 2) continue;
-  final ano = int.parse(parts[0]);
-  final mes = int.parse(parts[1]);
-        final dataCache = DateTime(ano, mes);
-        
-        if (dataCache.isAfter(mesInicial) || dataCache.isAtSameMomentAs(mesInicial)) {
+        // Formato: 'saldo_${uid}_YYYY-MM'
+        final ymPart = key.substring(prefix.length); // 'YYYY-MM'
+        final parts = ymPart.split('-');
+        if (parts.length != 2) continue;
+        final ano = int.parse(parts[0]);
+        final mes = int.parse(parts[1]);
+        final dataCache = DateTime(ano, mes, 1);
+
+        if (!dataCache.isBefore(mesInicial)) {
           await prefs.remove(key);
         }
-      } catch (e) {
-        // Ignora chaves inválidas
+      } catch (_) {
+        // Ignora chaves fora do formato esperado
       }
     }
   }
@@ -237,17 +183,17 @@ class SaldoService {
   /// Limpa todo o cache de saldos
   Future<void> limparTodoCache() async {
     final prefs = await SharedPreferences.getInstance();
-  final uid = _authService.userId;
-  final keys = prefs
-    .getKeys()
-    .where((key) => key.contains('-') && (uid == null || key.startsWith('${uid}_')));
-    
+    final uid = await _getUidWithFallback();
+    if (uid == null) return;
+    final prefix = 'saldo_${uid}_';
+    final keys = prefs.getKeys().where((key) => key.startsWith(prefix));
+
     for (final key in keys) {
       await prefs.remove(key);
     }
-    
+
     if (kDebugMode) {
-      print('🧹 Cache de saldos limpo');
+      print('🧹 Cache de saldos limpo para uid=$uid');
     }
   }
 

@@ -903,38 +903,128 @@ class _NovaTransacaoPageState extends State<NovaTransacaoPage> {
                                         ),
                                       ],
                                       
-                                      // if (viewmodel.tipoRecorrencia == 'fixo') ...[
-                                      //   const SizedBox(height: 20),
-                                      //   Text(
-                                      //     'Quantidade de Repetições (Opcional)',
-                                      //     style: TextStyle(
-                                      //       fontSize: 14,
-                                      //       fontWeight: FontWeight.w600,
-                                      //       color: helper.onSurfaceColor,
-                                      //     ),
-                                      //   ),
-                                      //   const SizedBox(height: 8),
-                                      //   CustomTextFormField(
-                                      //     labelText: 'Ex: 12 (deixe vazio para infinito)',
-                                      //     hintText: 'Quantidade de repetições',
-                                      //     controller: quantidadeRepeticoesController,
-                                      //     keyboardType: TextInputType.number,
-                                      //     backgroundColor: Colors.grey.shade50,
-                                      //     onChanged: (value) {
-                                      //       final quantidade = value.isEmpty ? null : int.tryParse(value);
-                                      //       viewmodel.setQuantidadeRepeticoes(quantidade);
-                                      //     },
-                                      //   ),
-                                      //   const SizedBox(height: 8),
-                                      //   Text(
-                                      //     'Se deixar vazio, as transações continuarão sendo criadas indefinidamente.',
-                                      //     style: TextStyle(
-                                      //       fontSize: 12,
-                                      //       color: Colors.grey.shade600,
-                                      //       fontStyle: FontStyle.italic,
-                                      //     ),
-                                      //   ),
-                                      // ],
+                                      if (viewmodel.tipoRecorrencia == 'fixo') ...[
+                                        const SizedBox(height: 20),
+                                        Text(
+                                          'Duração da recorrência',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: helper.onSurfaceColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  quantidadeRepeticoesController.clear();
+                                                  viewmodel.setQuantidadeRepeticoes(null); // infinita
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    color: viewmodel.quantidadeRepeticoes == null
+                                                        ? helper.primaryColor.withOpacity(0.1)
+                                                        : Colors.grey.withOpacity(0.05),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    border: Border.all(
+                                                      color: viewmodel.quantidadeRepeticoes == null
+                                                          ? helper.primaryColor
+                                                          : Colors.grey.withOpacity(0.3),
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        viewmodel.quantidadeRepeticoes == null
+                                                            ? Icons.radio_button_checked
+                                                            : Icons.radio_button_unchecked,
+                                                        color: viewmodel.quantidadeRepeticoes == null
+                                                            ? helper.primaryColor
+                                                            : Colors.grey,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      const Text('Infinita', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  // Define um padrão inicial se estava infinita
+                                                  if (viewmodel.quantidadeRepeticoes == null) {
+                                                    viewmodel.setQuantidadeRepeticoes(12);
+                                                    quantidadeRepeticoesController.text = '12';
+                                                  }
+                                                  setState(() {});
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(16),
+                                                  decoration: BoxDecoration(
+                                                    color: viewmodel.quantidadeRepeticoes != null
+                                                        ? helper.primaryColor.withOpacity(0.1)
+                                                        : Colors.grey.withOpacity(0.05),
+                                                    borderRadius: BorderRadius.circular(12),
+                                                    border: Border.all(
+                                                      color: viewmodel.quantidadeRepeticoes != null
+                                                          ? helper.primaryColor
+                                                          : Colors.grey.withOpacity(0.3),
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    children: [
+                                                      Icon(
+                                                        viewmodel.quantidadeRepeticoes != null
+                                                            ? Icons.radio_button_checked
+                                                            : Icons.radio_button_unchecked,
+                                                        color: viewmodel.quantidadeRepeticoes != null
+                                                            ? helper.primaryColor
+                                                            : Colors.grey,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      const Text('Com término', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (viewmodel.quantidadeRepeticoes != null) ...[
+                                          const SizedBox(height: 12),
+                                          CustomTextFormField(
+                                            labelText: 'Ex: 12',
+                                            hintText: 'Quantidade de repetições',
+                                            controller: quantidadeRepeticoesController,
+                                            keyboardType: TextInputType.number,
+                                            backgroundColor: Colors.grey.shade50,
+                                            onChanged: (value) {
+                                              final qtd = int.tryParse(value);
+                                              viewmodel.setQuantidadeRepeticoes(qtd == null || qtd <= 0 ? 1 : qtd);
+                                            },
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'O app criará essa quantidade de meses à frente. Você pode editar/pausar depois.',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ],
                                   ],
                                 ],
