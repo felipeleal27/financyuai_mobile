@@ -7,6 +7,7 @@ import 'package:neo_financyuai/app/database/sqllite/sql_lite.dart';
 import 'package:neo_financyuai/app/repository/home_repository/home_repository.dart';
 import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
+import 'package:neo_financyuai/app/service/saldo_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -77,6 +78,9 @@ class HomeRepositoryImpl extends HomeRepository {
         await query.insert('movimentacao', movimentacao.toMap());
       }
 
+      // Invalida e recalcula cache de saldo a partir do mês afetado
+  await SaldoService().recalcularCacheAPartirDe(movimentacao.dataMovimentacao);
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -110,6 +114,9 @@ class HomeRepositoryImpl extends HomeRepository {
         );
       }
 
+      // Invalida cache a partir do mês da (nova) data da transação
+  await SaldoService().recalcularCacheAPartirDe(movimentacao.dataMovimentacao);
+
       return true;
     } catch (e) {
       if (kDebugMode) {
@@ -140,6 +147,9 @@ class HomeRepositoryImpl extends HomeRepository {
           whereArgs: [movimentacao.id],
         );
       }
+
+      // Invalida e recalcula cache a partir do mês afetado
+  await SaldoService().recalcularCacheAPartirDe(movimentacao.dataMovimentacao);
 
       return true;
     } catch (e) {

@@ -49,8 +49,8 @@ abstract class HomeViewmodelBase with Store {
         await _homeRepository.removerMovimentacao(m);
         _movimentacoes.removeWhere((x) => x.id == m.id);
       }
-      // Atualiza saldo imediatamente após remoção
-      await carregarSaldo(_mesAtual);
+  // Atualiza saldo imediatamente após remoção considerando o mês selecionado
+  await carregarSaldo(_dataSelecionada);
     } catch (e) {
       if (kDebugMode) debugPrint('Erro ao remover relacionadas: $e');
     }
@@ -84,8 +84,8 @@ abstract class HomeViewmodelBase with Store {
         await _homeRepository.removerMovimentacao(m);
         _movimentacoes.removeWhere((x) => x.id == m.id);
       }
-      // Atualiza saldo imediatamente após remoção
-      await carregarSaldo(_mesAtual);
+  // Atualiza saldo imediatamente após remoção considerando o mês selecionado
+  await carregarSaldo(_dataSelecionada);
     } catch (e) {
       if (kDebugMode) debugPrint('Erro ao remover desta pra frente: $e');
     }
@@ -115,7 +115,7 @@ abstract class HomeViewmodelBase with Store {
     await _notificationService.initialize();
     // Não bloqueia a UI com sync completo aqui; o carregarMovimentacoes já dispara sync localmente
     try {
-      await carregarSaldo(_mesAtual);
+      await carregarSaldo(_dataSelecionada);
     } catch (_) {}
   }
 
@@ -164,7 +164,8 @@ abstract class HomeViewmodelBase with Store {
   ObservableList<MovimentacaoModel> _movimentacoes =
       ObservableList<MovimentacaoModel>();
 
-  final DateTime _mesAtual = DateTime.now();
+  // O saldo passa a ser calculado sempre com base em `_dataSelecionada`,
+  // portanto não precisamos mais de um mês atual próprio aqui.
 
   @observable
   bool _shouldOpenDialog = false;
@@ -693,7 +694,8 @@ abstract class HomeViewmodelBase with Store {
             }).toList();
 
   setMovimentacoes(movimentacoesFiltradas);
-  await carregarSaldo(_mesAtual);
+  // Atualiza saldo do mês selecionado (não do mês atual do dispositivo)
+  await carregarSaldo(_dataSelecionada);
 
         if (kDebugMode) {
           print(
@@ -728,6 +730,9 @@ abstract class HomeViewmodelBase with Store {
     final uid = _authService.userId;
     if (uid == null) return; // sem usuário, nada a fazer
     try {
+      // Garante que alterações locais pendentes sejam aplicadas no Firebase
+      await _syncService.processQueue(uid);
+
       await _syncService.syncFirebaseToSQLite(uid);
       // Recarrega do SQLite após sincronizar
       final movimentacoesLocal = await _homeRepository.getMovimentacoes(
@@ -737,8 +742,9 @@ abstract class HomeViewmodelBase with Store {
       final movimentacoesFiltradas = movimentacoesLocal.where((mov) =>
           mov.dataMovimentacao.year == _dataSelecionada.year &&
           mov.dataMovimentacao.month == _dataSelecionada.month).toList();
-      setMovimentacoes(movimentacoesFiltradas);
-  await carregarSaldo(_mesAtual);
+    setMovimentacoes(movimentacoesFiltradas);
+    // Após sincronizar, recalcula o saldo para o mês selecionado
+    await carregarSaldo(_dataSelecionada);
     } catch (e) {
       if (kDebugMode) {
         debugPrint('⚠️ Falha no sync Firebase→SQLite em segundo plano: $e');

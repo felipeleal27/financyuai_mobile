@@ -227,7 +227,7 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "=Pergunta: {{ $json.message }}\n\nDados do usuário disponíveis:\n- UserID: {{ $json.userId }}\n- Transações: {{ $json.transactionsFormatted }}\n- Nome do usuario: {{ $json.userName }}\n\nResponda à pergunta usando os dados de transações fornecidos acima.\nPode responder com emojis",
+        "text": "=Pergunta: {{ $json.message }}\n\nDados do usuário disponíveis:\n- UserID: {{ $json.userId }}\n- Transações: {{ $json.transactionsFormatted }}\n- Nome do usuario: {{ $json.userName }}\n\nResponda à pergunta usando os dados de transações fornecidos acima.\nPode responder com emojis\nPS: Há transações recorrentes. Ao lidar com datas, verifique se não são recorrentes. Ex: ao pedir “última transação”, considerar apenas até a data atual (ex.: 08/10/2025), não futuras. Se pedir “transações do mês”, inclua também as recorrentes.",
         "options": {
           "systemMessage": "Você é o assistente financeiro FinancyUAI. Seja amigável e objetivo. Só liste transações se o usuário pedir."
         }
@@ -393,11 +393,11 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "fd228d1f-ea5c-46f4-99fb-a2b6fb8e0d68",
+  "versionId": "aaab7497-fadd-4af8-9d53-0b15284be555",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "67590671082a837d52e44f7df505eb4d58400e312440b82b82fdbb7dcf8e43b2"

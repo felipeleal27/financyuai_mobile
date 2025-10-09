@@ -461,8 +461,8 @@ abstract class NovaTransacaoViewmodelBase with Store {
       
     } else if (_tipoRecorrencia == 'fixo') {
       // Gera transações fixas baseado na quantidade de repetições
-      // Se quantidadeRepeticoes for null (infinita), gera para os próximos 60 meses
-      final quantidadeFixa = _quantidadeRepeticoes ?? 60;
+      // Se quantidadeRepeticoes for null (infinita), gera um primeiro lote de 24 meses (2 anos)
+      final quantidadeFixa = _quantidadeRepeticoes ?? 24;
       
       if (kDebugMode) {
         print('DEBUG: Entrando em transações fixas');
@@ -565,6 +565,12 @@ abstract class NovaTransacaoViewmodelBase with Store {
     _parcelaAtual = 1;
     _intervaloPersonalizado = 1;
     _unidadePersonalizada = 'dias';
+    _tipoValorParcela = 'valor_parcela';
+    _quantidadeRepeticoes = null;
+
+    // Reseta estado de edição
+    _isEdicao = false;
+    _movimentacaoOriginal = null;
   }
 
   /// Valida se o formulário está válido para salvamento

@@ -5,6 +5,7 @@ import 'package:neo_financyuai/app/service/ai_holiday_service.dart';
 import 'package:neo_financyuai/app/service/ai_balance_forecast_service.dart';
 import 'package:neo_financyuai/app/service/auth_service.dart';
 import 'package:neo_financyuai/app/service/firebase_sync_service.dart';
+import 'package:neo_financyuai/app/service/recurrence_topup_service.dart';
 
 /// Serviço responsável por gerenciar tarefas em segundo plano
 /// 
@@ -142,6 +143,8 @@ void callbackDispatcher() {
           final uid = AuthService().userId;
           if (uid != null) {
             await FirebaseSyncService().processQueue(uid);
+            // Executa top-up de recorrências fixas
+            await RecurrenceTopUpService().runTopUp(uid);
           }
           return Future.value(true);
         case BackgroundTaskService.reminderTask:

@@ -89,7 +89,7 @@ class FirebaseSyncService {
     // 2) Enfileira operação para sincronizar
     await _enqueueUpsert('movimentacao', toInsert.id!, userId, _toFirebaseMap(toInsert));
     // 3) Tenta processar fila se houver internet
-    unawaited(_tryProcessQueueIfOnline(userId));
+    await _tryProcessQueueIfOnline(userId);
   }
 
   /// ✅ Atualiza uma transação (sempre local + fila de sync)
@@ -98,7 +98,7 @@ class FirebaseSyncService {
     await _updateInSQLite(movimentacao);
     // 2) Enfileira operação para sincronizar
     await _enqueueUpsert('movimentacao', movimentacao.id!, userId, _toFirebaseMap(movimentacao));
-    unawaited(_tryProcessQueueIfOnline(userId));
+    await _tryProcessQueueIfOnline(userId);
   }
 
   /// Sincroniza uma única transação para o Firebase
@@ -146,7 +146,7 @@ class FirebaseSyncService {
     }
     // 2) Enfileira remoção no Firebase
     await _enqueueDelete('movimentacao', movimentacaoId, userId);
-    unawaited(_tryProcessQueueIfOnline(userId));
+    await _tryProcessQueueIfOnline(userId);
   }
 
   /// Remove do SQLite local
